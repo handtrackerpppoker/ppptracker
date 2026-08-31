@@ -32,6 +32,18 @@
 <!-- Skip navigation link (Fix 4) -->
 <a href="#main-content" class="skip-link">{{ _('Skip to main content') }}</a>
 
+<!-- ── Side banner (vertical, auto-rotating) ─────────────────────
+     Right-edge skyscraper slot, fixed to the viewport. Configured via
+     SIDE_BANNER_IMAGES in static/app.js — empty by default, so it never
+     claims space or shows a placeholder until real images are set.
+     Rotates automatically once 2+ images are configured, shows statically
+     with exactly 1, and stays hidden with 0 (see _initSideBanner). Also
+     hidden below a viewport width where the page has no gutter to put it
+     in without overlapping the main content column (see CSS). -->
+<aside id="side-banner" class="side-banner d-none" aria-label="{{ _('Promotional banner') }}">
+  <img id="side-banner-img" class="side-banner-img" alt=""/>
+</aside>
+
 <!-- Outer container is now <main> for landmark (Fix 5 & 6) -->
 <main id="main-content" class="container-fluid py-4 px-3 px-md-5">
 

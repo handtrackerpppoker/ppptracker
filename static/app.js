@@ -822,6 +822,38 @@ function _fmtNum(n) {
   return Number(n || 0).toLocaleString('en-AU');
 }
 
+// TODO(Caio): add real promotional image URLs here (recommended ~160x600
+// vertical "skyscraper" crop). Empty by default — the side banner slot
+// stays hidden until at least one is set (see _initSideBanner).
+const SIDE_BANNER_IMAGES = [];
+const SIDE_BANNER_INTERVAL_MS = 6000; // within the AC's 5-8s default range
+
+/** Vertical auto-rotating side banner. No-op (stays hidden) with 0 images;
+    shows statically with 1; rotates with 2+. */
+function _initSideBanner() {
+  const el  = document.getElementById('side-banner');
+  const img = document.getElementById('side-banner-img');
+  if (!el || !img || !SIDE_BANNER_IMAGES.length) return;
+
+  let i = 0;
+  const show = idx => {
+    img.style.opacity = 0;
+    setTimeout(() => {
+      img.src = SIDE_BANNER_IMAGES[idx];
+      img.style.opacity = 1;
+    }, 200);
+  };
+  show(0);
+  el.classList.remove('d-none');
+
+  if (SIDE_BANNER_IMAGES.length > 1) {
+    setInterval(() => {
+      i = (i + 1) % SIDE_BANNER_IMAGES.length;
+      show(i);
+    }, SIDE_BANNER_INTERVAL_MS);
+  }
+}
+
 /** Simple network connectivity indicator, driven by navigator.onLine + online/offline events. */
 function _initConnStatus() {
   const el    = document.getElementById('conn-status');
@@ -3413,6 +3445,7 @@ function exportTournament(tourneyId, btn) {
 
 document.addEventListener('DOMContentLoaded', () => {
   _initConnStatus();
+  _initSideBanner();
 
   document.getElementById('url-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') handleImport();
