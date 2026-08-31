@@ -822,11 +822,12 @@ function _fmtNum(n) {
   return Number(n || 0).toLocaleString('en-AU');
 }
 
-/** Refresh the header banner. No-op when signed out — the banner stays hidden. */
+/** Refresh the two rewards blocks flanking the title. No-op when signed out — they stay hidden. */
 function _loadGamification() {
-  const banner = document.getElementById('gam-banner');
-  if (!banner) return;
-  if (!_currentUser) { banner.classList.add('d-none'); return; }
+  const left  = document.getElementById('gam-block-left');
+  const right = document.getElementById('gam-block-right');
+  if (!left || !right) return;
+  if (!_currentUser) { left.classList.add('d-none'); right.classList.add('d-none'); return; }
 
   _currentUser.getIdToken()
     .then(token => fetch('/api/gamification', { headers: { Authorization: `Bearer ${token}` } }))
@@ -855,9 +856,10 @@ function _loadGamification() {
         ? `<strong>${_fmtNum(next.remaining)}</strong> hands to ${_esc(next.title)}`
         : '';
 
-      banner.classList.remove('d-none');
+      left.classList.remove('d-none');
+      right.classList.remove('d-none');
     })
-    .catch(() => { /* the banner is decoration — never surface a failure here */ });
+    .catch(() => { /* the rewards blocks are decoration — never surface a failure here */ });
 }
 
 /** Floating summary of what an import just earned. */

@@ -66,12 +66,15 @@
     </div>
     </div>
   </div>
+  </div>
 
-  <!-- ── Gamification banner ─────────────────────────────────
-       Populated by _loadGamification() once auth resolves; stays hidden until then
-       so signed-out visitors never see an empty shell of zeroes. -->
-  <div id="gam-banner" class="gam-banner d-none" aria-live="polite">
-    <div class="gam-stats">
+  <!-- ── Header, flanked by the two rewards blocks ─────────────
+       gam-block-left (points/streak/rank) and gam-block-right (badges/next)
+       are populated by _loadGamification() once auth resolves; each is
+       hidden independently until then so signed-out visitors never see an
+       empty shell of zeroes, while the title/tagline always stays visible. -->
+  <div class="header-flanked">
+    <div id="gam-block-left" class="gam-stats d-none" aria-live="polite">
       <div class="gam-stat">
         <span class="gam-stat-value" id="gam-points">—</span>
         <span class="gam-stat-label">{{ _('Points') }}</span>
@@ -85,18 +88,15 @@
         <span class="gam-stat-label">{{ _('Weekly Rank') }}</span>
       </div>
     </div>
-    <div class="gam-side">
+    <div class="header-title-block text-center">
+      <!-- Decorative emoji hidden from screen readers (Fix 12) -->
+      <h1 class="app-title"><span aria-hidden="true">♠</span> PPPoker Hand Tracker <span aria-hidden="true">♣</span></h1>
+      <p class="app-tagline">{{ _('ANALYSE') }} &nbsp;·&nbsp; {{ _('STUDY') }} &nbsp;·&nbsp; {{ _('WIN') }}</p>
+    </div>
+    <div id="gam-block-right" class="gam-side d-none" aria-live="polite">
       <div class="gam-badges" id="gam-badges"></div>
       <div class="gam-next" id="gam-next"></div>
     </div>
-  </div>
-  </div>
-
-  <!-- ── Header ───────────────────────────────────────────── -->
-  <div class="text-center mb-3">
-    <!-- Decorative emoji hidden from screen readers (Fix 12) -->
-    <h1 class="app-title"><span aria-hidden="true">♠</span> PPPoker Hand Tracker <span aria-hidden="true">♣</span></h1>
-    <p class="app-tagline">{{ _('ANALYSE') }} &nbsp;·&nbsp; {{ _('STUDY') }} &nbsp;·&nbsp; {{ _('WIN') }}</p>
   </div>
 
   <!-- ── Feature banner ───────────────────────────────────── -->
