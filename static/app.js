@@ -854,6 +854,21 @@ function _initSideBanner() {
   }
 }
 
+// TODO(Caio): set a real promotional image URL here (a wide, short crop
+// works best — the slot caps at 180px tall). Empty by default — the
+// mid-page banner stays hidden until this is set (see _initMidBanner).
+const MID_BANNER_IMAGE = '';
+
+/** Static horizontal mid-page banner. No-op (stays hidden) with no image configured. */
+function _initMidBanner() {
+  const el  = document.getElementById('mid-banner');
+  const img = document.getElementById('mid-banner-img');
+  if (!el || !img || !MID_BANNER_IMAGE) return;
+
+  img.src = MID_BANNER_IMAGE;
+  el.classList.remove('d-none');
+}
+
 /** Simple network connectivity indicator, driven by navigator.onLine + online/offline events. */
 function _initConnStatus() {
   const el    = document.getElementById('conn-status');
@@ -3446,6 +3461,7 @@ function exportTournament(tourneyId, btn) {
 document.addEventListener('DOMContentLoaded', () => {
   _initConnStatus();
   _initSideBanner();
+  _initMidBanner();
 
   document.getElementById('url-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') handleImport();

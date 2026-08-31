@@ -296,6 +296,17 @@
     </div>
   </div>
 
+  <!-- ── Horizontal banner (mid-page) ───────────────────────────
+       Sits right after the free-vs-pro pitch, before results — the first
+       real content boundary a visitor reaches (placement to be confirmed
+       by Caio in review per the Task description; easy to relocate, it's
+       just one flex item in the vertical stack). Configured via
+       MID_BANNER_IMAGE in static/app.js — empty by default, so it claims
+       no space until a real image is set. -->
+  <div id="mid-banner" class="mid-banner d-none mb-4" style="max-width:1400px;margin:0 auto" aria-label="{{ _('Promotional banner') }}">
+    <img id="mid-banner-img" class="mid-banner-img" alt=""/>
+  </div>
+
   <!-- ── Results ──────────────────────────────────────────── -->
   <div id="results-section" class="d-none" style="max-width:1400px;margin:0 auto">
 

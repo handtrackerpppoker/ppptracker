@@ -121,6 +121,24 @@ body {
   .side-banner { display: none; }
 }
 
+/* ── Mid-page banner (horizontal) ─────────────────────────────
+   Static promo slot between the free-vs-pro pitch and the results
+   section. Empty by default (see MID_BANNER_IMAGE in app.js), so it
+   never reserves height or shows a placeholder box with no content. */
+.mid-banner {
+  border: 1px solid var(--color-accent-green-dark);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--color-bg-black);
+}
+.mid-banner-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 180px;
+  object-fit: cover;
+}
+
 /* ── Feature banner ──────────────────────────────────────── */
 .feature-banner {
   display: flex;
