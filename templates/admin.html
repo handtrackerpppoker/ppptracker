@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700;800&family=Exo+2:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous"/>
-  <link rel="stylesheet" href="/static/style.css?v=62"/>
+  <link rel="stylesheet" href="/static/style.css?v=63"/>
   <style>
     .page-back {
       display:inline-flex; align-items:center; gap:6px; color:var(--muted);
@@ -411,14 +411,11 @@
             <div class="p-3">
               <h3 class="adm-subhead">Export Ads</h3>
               <p class="adm-meta mb-3">
-                Free users answer a survey to unlock export slots past the free ones each
-                day. <b class="text-white">Hard limit</b> is the daily cap — set it to 0 to
-                block the functionality outright (no survey is ever shown, there's just
-                nothing to unlock). <b class="text-white">Soft limit</b> is how many of
-                those slots need a survey, counted off the end: with a hard limit of 5 and
-                a soft limit of 3, the first 2 exports are free and the last 3 need a
-                survey each. Soft limit 0 means every slot up to the hard cap is free.
-                Changes apply to the site immediately, no deploy.
+                Hand exports: <b class="text-white">Free</b> per day need no survey,
+                <b class="text-white">Gated</b> more per day need one. Tournament exports:
+                <b class="text-white">Free (lifetime)</b> once ever, then
+                <b class="text-white">Weekly limit</b> per week via survey. Applies
+                immediately, no deploy.
               </p>
               <div id="adm-ads-error" class="alert alert-danger d-none py-2"></div>
               <div id="adm-ads-body"></div>
@@ -428,10 +425,17 @@
               </div>
 
               <h3 class="adm-subhead mt-4">Import Ads</h3>
-              <p class="adm-meta mb-0">
-                Placeholder — imports aren't survey-gated yet. Reserved for a future
-                config here if that changes.
+              <p class="adm-meta mb-3">
+                <b class="text-white">Free</b> imports per day need no survey,
+                <b class="text-white">Gated</b> more per day need one. Applies
+                immediately, no deploy.
               </p>
+              <div id="adm-imports-error" class="alert alert-danger d-none py-2"></div>
+              <div id="adm-imports-body"></div>
+              <div class="adm-toolbar px-0">
+                <button type="button" class="adm-btn" id="adm-imports-save" onclick="saveImportAds()">Save</button>
+                <span class="adm-meta flex-grow-1" id="adm-imports-status"></span>
+              </div>
             </div>
           </section>
 
@@ -499,6 +503,7 @@
     if (name === 'leaktargets' && !GRID) tgReload();
     if (name === 'gamification' && !GAM) loadGamification();
     if (name === 'adcampaigns' && !ADS) loadExportAds();
+    if (name === 'adcampaigns' && !IMPORTS_ADS) loadImportAds();
   }
 
   // ── Gamification ───────────────────────────────────────────────────────────
@@ -697,61 +702,66 @@
   }
 
   function renderExportAds() {
-    const rows = [
-      { key: 'hand',    label: 'Hand exports' },
-      { key: 'tourney', label: 'Tournament exports' },
-    ];
-    document.getElementById('adm-ads-body').innerHTML = rows.map(r => {
-      const hard = ADS[r.key + '_hard_limit'], soft = ADS[r.key + '_soft_limit'];
-      const free = Math.max(hard - soft, 0);
-      return `
+    const hard = ADS['hand_hard_limit'], soft = ADS['hand_soft_limit'];
+    const free = Math.max(hard - soft, 0), gated = Math.max(soft, 0);
+    const tFree = ADS['tourney_lifetime_free'], tWeekly = ADS['tourney_weekly_limit'];
+    document.getElementById('adm-ads-body').innerHTML = `
       <div class="adm-gam-week">
-        <span class="adm-gam-wk">${esc(r.label)}</span>
+        <span class="adm-gam-wk">Hand exports</span>
         <label class="d-flex align-items-center gap-2" style="font-size:.82rem;color:var(--muted);">
-          Hard limit
+          Free
           <input type="number" min="0" step="1" class="form-control form-control-sm"
-                 style="width:70px;" id="adm-ads-${r.key}-hard" value="${esc(hard)}"
-                 oninput="renderExportAdsFreeCount('${r.key}')"/>
+                 style="width:70px;" id="adm-ads-hand-free" value="${esc(free)}"/>
         </label>
         <label class="d-flex align-items-center gap-2" style="font-size:.82rem;color:var(--muted);">
-          Soft limit
+          Gated
           <input type="number" min="0" step="1" class="form-control form-control-sm"
-                 style="width:70px;" id="adm-ads-${r.key}-soft" value="${esc(soft)}"
-                 oninput="renderExportAdsFreeCount('${r.key}')"/>
+                 style="width:70px;" id="adm-ads-hand-gated" value="${esc(gated)}"/>
         </label>
-        <span class="adm-meta" id="adm-ads-${r.key}-note">${free} free/day, ${Math.max(soft, 0)} survey-gated</span>
+      </div>
+      <div class="adm-gam-week">
+        <span class="adm-gam-wk">Tournament exports</span>
+        <label class="d-flex align-items-center gap-2" style="font-size:.82rem;color:var(--muted);">
+          Free (lifetime)
+          <input type="number" min="0" step="1" class="form-control form-control-sm"
+                 style="width:70px;" id="adm-ads-tourney-lifetime-free" value="${esc(tFree)}"/>
+        </label>
+        <label class="d-flex align-items-center gap-2" style="font-size:.82rem;color:var(--muted);">
+          Weekly limit
+          <input type="number" min="0" step="1" class="form-control form-control-sm"
+                 style="width:70px;" id="adm-ads-tourney-weekly-limit" value="${esc(tWeekly)}"/>
+        </label>
       </div>`;
-    }).join('');
     document.getElementById('adm-ads-status').textContent = '';
-  }
-
-  // Live "N free/day, M survey-gated" readout as the admin edits the two numbers,
-  // so they can see the effect of hard/soft before saving.
-  function renderExportAdsFreeCount(kind) {
-    const hard = parseInt(document.getElementById(`adm-ads-${kind}-hard`).value, 10);
-    const soft = parseInt(document.getElementById(`adm-ads-${kind}-soft`).value, 10);
-    const note = document.getElementById(`adm-ads-${kind}-note`);
-    if (isNaN(hard) || isNaN(soft)) { note.textContent = ''; return; }
-    const free = Math.max(hard - soft, 0);
-    note.textContent = hard === 0
-      ? 'blocked — no exports allowed'
-      : `${free} free/day, ${Math.max(Math.min(soft, hard), 0)} survey-gated`;
   }
 
   async function saveExportAds() {
     const btn = document.getElementById('adm-ads-save');
     showAdsError('');
     const payload = {};
-    for (const kind of ['hand', 'tourney']) {
-      for (const field of ['hard', 'soft']) {
-        const val = parseInt(document.getElementById(`adm-ads-${kind}-${field}`).value, 10);
-        if (isNaN(val) || val < 0) {
-          showAdsError(`"${kind === 'hand' ? 'Hand' : 'Tournament'} exports" ${field} limit must be a non-negative number.`);
-          return;
-        }
-        payload[`${kind}_${field}_limit`] = val;
+    const handVals = {};
+    for (const field of ['free', 'gated']) {
+      const val = parseInt(document.getElementById(`adm-ads-hand-${field}`).value, 10);
+      if (isNaN(val) || val < 0) {
+        showAdsError(`"Hand exports" ${field === 'free' ? 'Free' : 'Gated'} must be a non-negative number.`);
+        return;
       }
+      handVals[field] = val;
     }
+    payload['hand_hard_limit'] = handVals.free + handVals.gated;
+    payload['hand_soft_limit'] = handVals.gated;
+    const tFree = parseInt(document.getElementById('adm-ads-tourney-lifetime-free').value, 10);
+    if (isNaN(tFree) || tFree < 0) {
+      showAdsError('"Tournament exports" free (lifetime) must be a non-negative number.');
+      return;
+    }
+    const tWeekly = parseInt(document.getElementById('adm-ads-tourney-weekly-limit').value, 10);
+    if (isNaN(tWeekly) || tWeekly < 0) {
+      showAdsError('"Tournament exports" weekly limit must be a non-negative number.');
+      return;
+    }
+    payload['tourney_lifetime_free'] = tFree;
+    payload['tourney_weekly_limit'] = tWeekly;
     btn.disabled = true;
     try {
       const res = await authFetch('/api/admin/export-ads-config', {
@@ -775,6 +785,85 @@
 
   function showAdsError(msg) {
     const e = document.getElementById('adm-ads-error');
+    e.textContent = msg || '';
+    e.classList.toggle('d-none', !msg);
+  }
+
+  // ── Ad Campaigns: Import Ads ──────────────────────────────────────────────
+  let IMPORTS_ADS = null;   // /api/admin/import-ads-config response
+
+  async function loadImportAds() {
+    showImportsAdsError('');
+    const box = document.getElementById('adm-imports-body');
+    box.innerHTML = '<span class="adm-meta">Loading…</span>';
+    try {
+      const res = await authFetch('/api/admin/import-ads-config');
+      if (!res.ok) {
+        box.innerHTML = '';
+        showImportsAdsError(await errorText(res, 'Failed to load import ads config'));
+        return;
+      }
+      IMPORTS_ADS = await res.json();
+      renderImportAds();
+    } catch (e) {
+      box.innerHTML = '';
+      showImportsAdsError('Could not reach the server: ' + e.message);
+    }
+  }
+
+  function renderImportAds() {
+    document.getElementById('adm-imports-body').innerHTML = `
+      <div class="adm-gam-week">
+        <span class="adm-gam-wk">Imports</span>
+        <label class="d-flex align-items-center gap-2" style="font-size:.82rem;color:var(--muted);">
+          Free
+          <input type="number" min="0" step="1" class="form-control form-control-sm"
+                 style="width:70px;" id="adm-imports-free" value="${esc(IMPORTS_ADS.free)}"/>
+        </label>
+        <label class="d-flex align-items-center gap-2" style="font-size:.82rem;color:var(--muted);">
+          Gated
+          <input type="number" min="0" step="1" class="form-control form-control-sm"
+                 style="width:70px;" id="adm-imports-gated" value="${esc(IMPORTS_ADS.gated)}"/>
+        </label>
+      </div>`;
+    document.getElementById('adm-imports-status').textContent = '';
+  }
+
+  async function saveImportAds() {
+    const btn = document.getElementById('adm-imports-save');
+    showImportsAdsError('');
+    const payload = {};
+    for (const field of ['free', 'gated']) {
+      const val = parseInt(document.getElementById(`adm-imports-${field}`).value, 10);
+      if (isNaN(val) || val < 0) {
+        showImportsAdsError(`"${field === 'free' ? 'Free' : 'Gated'}" must be a non-negative number.`);
+        return;
+      }
+      payload[field] = val;
+    }
+    btn.disabled = true;
+    try {
+      const res = await authFetch('/api/admin/import-ads-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        showImportsAdsError(await errorText(res, 'Failed to save import ads config'));
+        return;
+      }
+      IMPORTS_ADS = await res.json();
+      renderImportAds();
+      document.getElementById('adm-imports-status').textContent = 'Saved.';
+    } catch (e) {
+      showImportsAdsError('Could not reach the server: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function showImportsAdsError(msg) {
+    const e = document.getElementById('adm-imports-error');
     e.textContent = msg || '';
     e.classList.toggle('d-none', !msg);
   }

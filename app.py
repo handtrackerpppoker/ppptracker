@@ -181,7 +181,7 @@ def _fetch_record(uid, rdkey, summary, referer):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", gate_stub_modal_enabled=_GATE_STUB_MODAL_ENABLED)
 
 
 @app.route("/health")
@@ -208,12 +208,9 @@ def analyze():
     viewer_uid = claims.get('uid') if claims else None
     tier       = _tier(viewer_uid)
 
-    if tier == 'free':
-        used = _quota_state(viewer_uid)['imports']
-        if used >= FREE_IMPORTS_PER_DAY:
-            return jsonify({'error': 'quota_exceeded', 'kind': 'import',
-                            'used': used, 'limit': FREE_IMPORTS_PER_DAY,
-                            'upgrade': True}), 402
+    gate = _import_gate(request, viewer_uid)
+    if not gate.ok:
+        return gate.error
 
     _EXPIRED_MSG = (
         "This link may have expired. Please re-open PPPoker, go to Hand History, "
@@ -249,7 +246,7 @@ def analyze():
     # Newest first (matching original list order)
     records.sort(key=lambda r: r["summary"].get("C", 0), reverse=True)
 
-    payload = _build_import_response(records, claims, tier, uid, len(hands))
+    payload = _build_import_response(records, claims, tier, uid, len(hands), gate)
 
     if tier == 'anon':
         # Nothing is persisted for an anonymous import. Park it in Storage for an
@@ -280,15 +277,6 @@ def analyze_claim():
     if not token:
         return jsonify({'error': 'session_token is required'}), 400
 
-    if tier == 'free':
-        used = _quota_state(uid)['imports']
-        if used >= FREE_IMPORTS_PER_DAY:
-            # The blob is left alone on purpose: the user can claim it tomorrow,
-            # or after upgrading, for as long as its hour lasts.
-            return jsonify({'error': 'quota_exceeded', 'kind': 'import',
-                            'used': used, 'limit': FREE_IMPORTS_PER_DAY,
-                            'upgrade': True}), 402
-
     session = _load_anon_session(token)
     if not session:
         return jsonify({'error': 'session_expired'}), 404
@@ -296,19 +284,37 @@ def analyze_claim():
     if not records:
         return jsonify({'error': 'session_expired'}), 404
 
+    # Gated last, once the route knows there is actually something to claim —
+    # same convention as _export_gate ("called last, once the route knows it
+    # can actually produce the file"), so a stale/replayed token 404s as
+    # session_expired instead of being misreported as gated. The blob is left
+    # alone on a gate refusal, on purpose: the user can claim it tomorrow, or
+    # after upgrading/unlocking, for as long as its hour lasts.
+    gate = _import_gate(request, uid)
+    if not gate.ok:
+        return gate.error
+
     payload = _build_import_response(records, claims, tier,
-                                     session.get('player_uid') or '', len(records))
+                                     session.get('player_uid') or '', len(records), gate)
     if payload.get('saved'):
         _delete_anon_session(token)
     payload['claimed'] = bool(payload.get('saved'))
     return jsonify(payload)
 
 
-def _build_import_response(records, claims, tier, player_uid, total_available):
+def _build_import_response(records, claims, tier, player_uid, total_available, gate=None):
     """The shared body of /api/analyze and /api/analyze/claim.
 
     Prunes anything outside a free account's history window (from the response as
     well as from what gets persisted), saves, scores, and assembles the payload.
+
+    gate is the _import_gate() result the caller already checked .ok on before
+    doing any of this work; its commit() (bumping quota.imports and, if this
+    import spent one, the credit/gate-event) only fires once we know the
+    import actually saved something, same as every export route's gate.commit()
+    only fires once the file was actually built. gate is optional (None) only
+    for existing internal callers that don't go through a gate — none do
+    today, but keeping it optional avoids a hard break if one shows up.
     """
     from hand_parser import extract_tourney_id as _extract_tid
 
@@ -346,8 +352,8 @@ def _build_import_response(records, claims, tier, player_uid, total_available):
     saved, new_ids = _save_tournaments(claims, records, tournaments)
     new_hands = len(new_ids)
 
-    if saved and tier == 'free':
-        _bump_quota(claims['uid'], 'imports')
+    if saved and gate is not None:
+        gate.commit()
 
     gamification_result = _score_import(claims, new_hands)
 
@@ -597,8 +603,20 @@ FREE_TOURNEY_EXPORTS_DAY  = 1
 
 # Survey credits are single-use unlocks. They deliberately do NOT reset daily —
 # but they are capped so a user can't stockpile a week of surveys and dump them.
-CREDIT_CAPS = {'hand': 3, 'tourney': 1}
+# 'import' was added alongside the gate-stub wiring (Task 6): a completed stub
+# modal grants one the same way a CPX postback grants a 'hand'/'tourney' one, so
+# the import gate reuses the exact same grant/consume/ad-token machinery below
+# instead of inventing a parallel one.
+CREDIT_CAPS = {'hand': 3, 'tourney': 1, 'import': 3}
 CREDIT_KINDS = tuple(CREDIT_CAPS)
+
+# Two adjacent-but-different naming domains meet at the gate-events log:
+# credit/quota code says 'hand' | 'tourney' | 'import'; gate_events (and the
+# gate-stub-modal's own kind param) say 'hand_export' | 'tourney_export' |
+# 'import'. This is the one mapping between them, used wherever a credit-kind
+# needs to become a gate_events kind.
+_CREDIT_KIND_TO_EVENT_KIND = {'hand': 'hand_export', 'tourney': 'tourney_export',
+                              'import': 'import'}
 
 _AD_TOKEN_SECRET      = os.getenv('AD_TOKEN_SECRET', '')
 _ANON_SESSION_SECRET  = os.getenv('ANON_SESSION_SECRET', '')
@@ -608,6 +626,18 @@ _TALLY_SIGNING_SECRET = os.getenv('TALLY_SIGNING_SECRET', '')
 # The Tally fallback needs a form to embed; the signing secret alone doesn't say
 # which one. Optional — with it unset the client simply never offers the fallback.
 _TALLY_FORM_URL       = os.getenv('TALLY_FORM_URL', '')
+
+# Self-hosted "watch to unlock" modal that stands in for a real rewarded-video ad
+# while ayeT-Studios/Wannads publisher approvals are pending. Default ON: unset
+# means the stub renders. Only an explicit falsy value turns it off (e.g. once a
+# real ad SDK is swapped in and the stub is no longer wanted at all).
+_GATE_STUB_MODAL_ENABLED = os.getenv('GATE_STUB_MODAL_ENABLED', '1').strip().lower() \
+    not in ('0', 'false', 'no', 'off')
+
+# kind values the gate stub completion endpoint accepts — mirrors the import /
+# hand-export soft-limit gates this modal will eventually stand in front of
+# (Task 6, not part of this change).
+_GATE_STUB_KINDS = ('import', 'hand_export')
 
 _ANON_SESSION_TTL   = 3600          # 1h, matched by the signed token's exp
 _ANON_SESSION_PREFIX = 'anon_sessions/'
@@ -871,18 +901,37 @@ def _verify_ad_token(header_val, uid, expected_kind):
 # ── Export gate ───────────────────────────────────────────────────────────────
 
 class _ExportGate:
-    """Answer to "may this export be charged for?", plus what to charge.
+    """Answer to "may this action be charged for?", plus what to charge.
+
+    Shared by all three gates (import, hand export, tourney export) — the
+    free/gated/hard-limit shapes differ, but "maybe consume a quota slot,
+    maybe consume a credit, maybe bump the tourney counter, then log what
+    happened" is the same commit-time contract for all of them.
 
     error is a ready-to-return Flask tuple when the answer is no. On yes, the
-    route calls commit() once the file has actually been built, so a failed
-    export doesn't burn the day's quota or the user's credit.
+    route calls commit() once the action has actually succeeded, so a failed
+    export/import doesn't burn the day's quota, the tourney counter, or the
+    user's credit.
+
+    gate_kind/gated/provider feed _record_gate_event (Task 4's audit log) —
+    gate_kind is one of 'import' | 'hand_export' | 'tourney_export' (the
+    gate_events kind domain, not _export_gate's own 'hand'/'tourney' kind
+    argument). gated=False for a grant inside the free allowance; gated=True
+    for one that spent a credit/ad-token. provider is only set for a *fresh*
+    provider event — a banked credit being spent here carries no fresh
+    provider, per docs/firestore-schema.md's note on gate_provider.
     """
 
-    def __init__(self, uid, error=None, quota_key=None, credit_kind=None):
+    def __init__(self, uid, error=None, quota_key=None, credit_kind=None,
+                 tourney_bump=False, gate_kind=None, gated=False, provider=None):
         self.uid = uid
         self.error = error
         self._quota_key = quota_key
         self._credit_kind = credit_kind
+        self._tourney_bump = tourney_bump
+        self._gate_kind = gate_kind
+        self._gated = gated
+        self._provider = provider
 
     @property
     def ok(self):
@@ -893,6 +942,11 @@ class _ExportGate:
             _consume_credit(self.uid, self._credit_kind)
         if self._quota_key:
             _bump_quota(self.uid, self._quota_key)
+        if self._tourney_bump:
+            _bump_tourney_export_usage(self.uid)
+        if self._gate_kind:
+            _record_gate_event(self.uid, self._gate_kind, self._gated,
+                                provider=self._provider)
 
 
 def _export_uid(req):
@@ -916,8 +970,25 @@ _EXPORT_ADS_DEFAULTS = {
     # no special-casing needed, it falls out of the arithmetic below.
     'hand_hard_limit':    FREE_HAND_EXPORTS_PER_DAY,                          # 5
     'hand_soft_limit':    FREE_HAND_EXPORTS_PER_DAY - FREE_HAND_EXPORTS_UNGATED,  # 3 gated
+    # tourney_hard_limit/tourney_soft_limit are the OLD daily hard/soft pair.
+    # As of the gate-wiring task, _tourney_export_gate() no longer reads
+    # either of these — tourney-export enforcement is fully on the lifetime+
+    # weekly model below now. They are kept here ONLY because they are still
+    # part of this dict's persisted shape in Firestore (admin saves are
+    # PATCH-style merges, so an old doc may still carry them) and because the
+    # public /api/export-ads-config GET route + admin UI + static/app.js's
+    # admin-panel rendering may still reference them (out of scope for this
+    # task — see Task 7, running in parallel). Safe for a human to retire
+    # from this dict, the admin config UI and that rendering code once that
+    # overlap is checked and cleared.
     'tourney_hard_limit': FREE_TOURNEY_EXPORTS_DAY,                          # 1
     'tourney_soft_limit': FREE_TOURNEY_EXPORTS_DAY,   # today: the 1 slot is fully gated
+    # Tourney-export admin config actually enforced now (see
+    # _tourney_export_gate, which delegates to _tourney_export_state /
+    # _bump_tourney_export_usage for the per-user lifetime+weekly counters):
+    # 1 free-for-life export per user, then this many per ISO week after that.
+    'tourney_lifetime_free': 1,
+    'tourney_weekly_limit':  1,
 }
 
 
@@ -942,6 +1013,40 @@ def _export_ads_config():
     return cfg
 
 
+_IMPORT_ADS_DEFAULTS = {
+    # Imports aren't split into kinds the way exports are (hand vs tourney) —
+    # just one daily allowance. 'free' is how many imports a day need no
+    # unlock; 'gated' is how many more gate-stub-modal-gated imports are
+    # available on top of those. Read by _import_gate() (below _export_gate).
+    'free':  1,
+    'gated': 2,
+}
+
+
+def _import_ads_config():
+    """Admin-configurable free/gated import allowance.
+
+    Mirrors _export_ads_config(): read fresh from Firestore on every call so
+    an admin change takes effect on the very next request, no redeploy or
+    cache to invalidate. Falls back to the defaults on a missing doc or any
+    read failure.
+
+    Read by _import_gate() (below _export_gate) to decide the free/gated
+    split of the daily quota.imports counter.
+    """
+    cfg = dict(_IMPORT_ADS_DEFAULTS)
+    try:
+        snap = _get_admin_db().collection('config').document('import_ads').get()
+        stored = snap.to_dict() if snap.exists else {}
+    except Exception as exc:
+        print(f"[_import_ads_config] read failed: {type(exc).__name__}: {exc}")
+        stored = {}
+    for key in _IMPORT_ADS_DEFAULTS:
+        if key in stored:
+            cfg[key] = stored[key]
+    return cfg
+
+
 def _export_gate(req, uid, kind):
     """Quota/survey gate for one export. kind is 'hand' or 'tourney'.
 
@@ -949,40 +1054,52 @@ def _export_gate(req, uid, kind):
     that was going to 404 anyway must not be answered with "buy a survey first",
     and must not consume the day's allowance.
 
-    pro  → always allowed, uncounted
-    free → admin-configured hard_limit/soft_limit (see _EXPORT_ADS_DEFAULTS)
-           decide the daily cap and how many of those slots need a survey
-           credit or X-Ad-Token. hard_limit=0 blocks the kind outright, before
-           any survey is ever offered.
+    pro → always allowed, uncounted, for both kinds.
+
+    'hand' stays a daily free/gated/hard-limit shape (see _EXPORT_ADS_DEFAULTS'
+    hand_hard_limit/hand_soft_limit) — the gated slots now unlock via a
+    completed gate-stub-modal completion (which grants a 'hand' credit; see
+    gate_stub_completion()) instead of CPX, but the credit/ad-token machinery
+    that spends it is unchanged. Numbers are unchanged: 2 free / 3 gated / 5
+    total per day.
+
+    'tourney' is delegated to _tourney_export_gate — it no longer uses the
+    daily quota shape at all (see that function).
     """
     if _tier(uid) == 'pro':
         return _ExportGate(uid)
+    if kind == 'tourney':
+        return _tourney_export_gate(req, uid)
+    return _hand_export_gate(req, uid)
 
+
+def _hand_export_gate(req, uid):
+    """The 'hand' half of _export_gate, split out for clarity now that
+    'tourney' has its own, differently-shaped gate function."""
     state = _quota_state(uid)
     ads = _export_ads_config()
-    if kind == 'tourney':
-        used, quota_key = state['tourney_exports'], 'tourney_exports'
-        hard, soft = ads['tourney_hard_limit'], ads['tourney_soft_limit']
-    else:
-        used, quota_key = state['hand_exports'], 'hand_exports'
-        hard, soft = ads['hand_hard_limit'], ads['hand_soft_limit']
+    used, quota_key = state['hand_exports'], 'hand_exports'
+    hard, soft = ads['hand_hard_limit'], ads['hand_soft_limit']
 
     if used >= hard:
         return _ExportGate(uid, error=(jsonify({
-            'error': 'quota_exceeded', 'kind': kind, 'used': used, 'limit': hard,
+            'error': 'quota_exceeded', 'kind': 'hand', 'used': used, 'limit': hard,
             'upgrade': True}), 402))
 
     free_count = max(hard - soft, 0)
     if used < free_count:
-        return _ExportGate(uid, quota_key=quota_key)
+        return _ExportGate(uid, quota_key=quota_key,
+                            gate_kind='hand_export', gated=False)
 
-    if _verify_ad_token(req.headers.get('X-Ad-Token', ''), uid, kind):
-        return _ExportGate(uid, quota_key=quota_key)     # token already spent
-    if _credits(uid).get(kind, 0) > 0:
-        return _ExportGate(uid, quota_key=quota_key, credit_kind=kind)
+    if _verify_ad_token(req.headers.get('X-Ad-Token', ''), uid, 'hand'):
+        return _ExportGate(uid, quota_key=quota_key,
+                            gate_kind='hand_export', gated=True)   # token already spent
+    if _credits(uid).get('hand', 0) > 0:
+        return _ExportGate(uid, quota_key=quota_key, credit_kind='hand',
+                            gate_kind='hand_export', gated=True)
 
     return _ExportGate(uid, error=(jsonify({
-        'error': 'survey_required', 'kind': kind, 'used': used, 'limit': hard}), 402))
+        'error': 'survey_required', 'kind': 'hand', 'used': used, 'limit': hard}), 402))
 
 
 def _require_pro_export(req, feature):
@@ -994,6 +1111,278 @@ def _require_pro_export(req, feature):
     if _tier(uid) != 'pro':
         return None, (jsonify({'error': 'upgrade_required', 'feature': feature}), 403)
     return uid, None
+
+
+def _import_gate(req, uid):
+    """Free/gated/hard-limit gate for one import, same shape as
+    _hand_export_gate but backed by _import_ads_config()'s free/gated fields
+    instead of the export config, and by the existing quota.imports daily
+    counter (unchanged — see _bump_quota/_quota_state) rather than a new
+    counter of its own.
+
+    uid may be falsy (an anonymous caller): anonymous imports were never
+    counted against the daily quota before this gate existed (there is no
+    uid to count them against), so a falsy uid bypasses the gate exactly the
+    way a Pro uid does. Both routes that call this (/api/analyze,
+    /api/analyze/claim) already only reach here after auth has been resolved
+    to whatever uid (possibly None) applies.
+
+    The gated slots unlock via a completed gate-stub-modal completion, which
+    grants an 'import' credit (see gate_stub_completion()) — the same
+    credit/ad-token machinery _hand_export_gate uses, just a different
+    credit kind. There is no survey-provider path for imports; the stub
+    modal is the only unlock mechanism (see AC6 in the wire-three-gates task
+    for why: imports/hand-exports use the stub while ad-network approval is
+    pending, tourney exports keep CPX).
+    """
+    if not uid or _tier(uid) == 'pro':
+        return _ExportGate(uid)
+
+    state = _quota_state(uid)
+    ads = _import_ads_config()
+    used = state['imports']
+    hard = ads['free'] + ads['gated']
+
+    if used >= hard:
+        return _ExportGate(uid, error=(jsonify({
+            'error': 'quota_exceeded', 'kind': 'import', 'used': used, 'limit': hard,
+            'upgrade': True}), 402))
+
+    if used < ads['free']:
+        return _ExportGate(uid, quota_key='imports',
+                            gate_kind='import', gated=False)
+
+    if _verify_ad_token(req.headers.get('X-Ad-Token', ''), uid, 'import'):
+        return _ExportGate(uid, quota_key='imports',
+                            gate_kind='import', gated=True)   # token already spent
+    if _credits(uid).get('import', 0) > 0:
+        return _ExportGate(uid, quota_key='imports', credit_kind='import',
+                            gate_kind='import', gated=True)
+
+    return _ExportGate(uid, error=(jsonify({
+        'error': 'survey_required', 'kind': 'import', 'used': used, 'limit': hard}), 402))
+
+
+# ── Tourney-export: lifetime-free + weekly counter ─────────────────────────────
+# The daily quota/credit shape above ("N/day, survey-gated") doesn't fit the new
+# tourney-export model: 1 free EVER (lifetime, not daily), then 1/week. This is
+# a separate counter, in its own users/{uid}/quota/tourney_export subcollection
+# doc, resolved against the server's own clock — never a client-supplied week.
+#
+# Building the read/write helpers now; the actual gate check that decides
+# *when* to block an export and prompt a rewarded-video/survey unlock is a
+# later task. Nothing below is called from any route yet.
+
+def _tourney_export_ref(uid):
+    return _user_ref(uid).collection('quota').document('tourney_export')
+
+
+def _current_iso_week(ts=None):
+    """'YYYY-Www' for the given epoch seconds (default: now), UTC, ISO 8601
+    week numbering (Python's own isocalendar() — Monday-start weeks, week 1 is
+    the week containing the year's first Thursday). Always server-side; a
+    client's timezone or clock is never consulted."""
+    from datetime import datetime as _d, timezone as _tz
+    dt = _d.fromtimestamp(ts if ts is not None else time.time(), tz=_tz.utc)
+    iso_year, iso_week, _ = dt.isocalendar()
+    return f'{iso_year}-W{iso_week:02d}'
+
+
+_EMPTY_TOURNEY_EXPORT_STATE = {
+    'lifetime_free_used': False,
+    'lifetime_free_used_at': None,
+    'current_week_iso': None,
+    'current_week_used': 0,
+    'last_reset_at': None,
+}
+
+
+def _tourney_export_state(uid):
+    """{lifetime_free_used, lifetime_free_used_at, current_week_iso,
+    current_week_used, last_reset_at} for uid.
+
+    Read-only and lazy, the same shape as _quota_state: a stored week that
+    isn't this ISO week reads current_week_used as 0 without anyone having to
+    rewrite the doc first (that happens lazily, on the next bump). The current
+    week is always resolved server-side.
+    """
+    this_week = _current_iso_week()
+    state = dict(_EMPTY_TOURNEY_EXPORT_STATE, current_week_iso=this_week)
+    try:
+        snap = _tourney_export_ref(uid).get()
+        stored = snap.to_dict() if snap.exists else None
+    except Exception as exc:
+        print(f"[_tourney_export_state] read failed for uid={uid}: {type(exc).__name__}: {exc}")
+        stored = None
+    if isinstance(stored, dict):
+        state['lifetime_free_used'] = bool(stored.get('lifetime_free_used'))
+        state['lifetime_free_used_at'] = stored.get('lifetime_free_used_at')
+        state['last_reset_at'] = stored.get('last_reset_at')
+        if stored.get('current_week_iso') == this_week:
+            state['current_week_used'] = int(stored.get('current_week_used') or 0)
+    return state
+
+
+def _bump_tourney_export_usage(uid):
+    """Transactionally record one tourney-export use: spends the lifetime
+    freebie first if it hasn't been spent yet, otherwise +1 on this ISO
+    week's counter (rolling the week over first, mirroring _quota_state's day
+    rollover). Returns the new state dict, or None on failure.
+
+    Not wired to any route yet — the future gate-check task calls this once
+    it has decided the export should count.
+    """
+    if not uid:
+        return None
+    from google.cloud import firestore as gcf
+    db, ref = _get_admin_db(), _tourney_export_ref(uid)
+    this_week = _current_iso_week()
+
+    @gcf.transactional
+    def _txn(transaction):
+        snap = ref.get(transaction=transaction)
+        stored = snap.to_dict() if snap.exists else None
+        stored = stored if isinstance(stored, dict) else {}
+        now = gcf.SERVER_TIMESTAMP
+
+        if not stored.get('lifetime_free_used'):
+            new_state = {
+                'lifetime_free_used': True,
+                'lifetime_free_used_at': now,
+                'current_week_iso': stored.get('current_week_iso') or this_week,
+                'current_week_used': int(stored.get('current_week_used') or 0),
+                'last_reset_at': stored.get('last_reset_at') or now,
+            }
+        else:
+            week_used = (int(stored.get('current_week_used') or 0)
+                         if stored.get('current_week_iso') == this_week else 0)
+            new_state = {
+                'lifetime_free_used': True,
+                'lifetime_free_used_at': stored.get('lifetime_free_used_at'),
+                'current_week_iso': this_week,
+                'current_week_used': week_used + 1,
+                'last_reset_at': now,
+            }
+
+        if snap.exists:
+            transaction.update(ref, new_state)
+        else:
+            transaction.create(ref, new_state)
+        return new_state
+
+    try:
+        return _txn(db.transaction())
+    except Exception as exc:
+        print(f"[_bump_tourney_export_usage] failed for uid={uid}: {type(exc).__name__}: {exc}")
+        return None
+
+
+def _tourney_export_gate(req, uid):
+    """The 'tourney' gate: lifetime-free-once, then survey-gated once per ISO
+    week (config/export_ads' tourney_lifetime_free / tourney_weekly_limit —
+    tourney_lifetime_free is always 1 unlock spent lazily on first use, so only
+    tourney_weekly_limit is actually read here as a limit to compare against).
+
+    Caller (_export_gate) has already handled the Pro bypass, so this only
+    runs for a free uid.
+
+      1. lifetime freebie unspent → grant, and commit() spends it via
+         _bump_tourney_export_usage (which itself decides lifetime vs weekly).
+      2. lifetime spent, under this week's limit → same as _hand_export_gate's
+         gated slot: an X-Ad-Token or a banked 'tourney' credit (granted by
+         CPX's postback — tourney keeps CPX, unlike hand/import) unlocks it;
+         commit() both spends the credit/token AND bumps the weekly counter.
+      3. lifetime spent, at this week's limit → blocked; the client's next
+         move is CPX, same as the pre-rewiring behaviour.
+
+    Deliberately does NOT pre-check tourney_lifetime_free from config: the
+    model is "1 free, ever", not "N free, ever" — a lifetime freebie count
+    above 1 isn't a shape this per-user doc or _bump_tourney_export_usage
+    supports today, so this reads it as a boolean the way
+    _tourney_export_state's own field name (lifetime_free_used) implies.
+    """
+    state = _tourney_export_state(uid)
+    weekly_limit = _export_ads_config()['tourney_weekly_limit']
+
+    if not state['lifetime_free_used']:
+        return _ExportGate(uid, tourney_bump=True,
+                            gate_kind='tourney_export', gated=False)
+
+    used = state['current_week_used']
+    if used < weekly_limit:
+        if _verify_ad_token(req.headers.get('X-Ad-Token', ''), uid, 'tourney'):
+            return _ExportGate(uid, tourney_bump=True,
+                                gate_kind='tourney_export', gated=True)
+        if _credits(uid).get('tourney', 0) > 0:
+            return _ExportGate(uid, tourney_bump=True, credit_kind='tourney',
+                                gate_kind='tourney_export', gated=True)
+        return _ExportGate(uid, error=(jsonify({
+            'error': 'survey_required', 'kind': 'tourney',
+            'used': used, 'limit': weekly_limit}), 402))
+
+    return _ExportGate(uid, error=(jsonify({
+        'error': 'quota_exceeded', 'kind': 'tourney', 'used': used,
+        'limit': weekly_limit, 'upgrade': True}), 402))
+
+
+# ── Gate-event history ──────────────────────────────────────────────────────────
+# One append-only subcollection, shared by every gated action (tourney export,
+# hand export, import), so they all get a history/audit trail "for free" instead
+# of three bespoke logs. gate_provider is deliberately a free-form string, not a
+# fixed enum: today's values are 'stub' (the watch-to-unlock modal) and 'cpx'
+# (the existing CPX Research survey), and a future rewarded-video SDK adds
+# 'ayet' / 'wannads' without touching this schema.
+
+def _record_gate_event(uid, kind, gated, provider=None, completion_id=None, doc_id=None):
+    """Append one row to users/{uid}/gate_events.
+
+    kind:      'tourney_export' | 'hand_export' | 'import'
+    gated:     True when the action actually required an unlock (survey, ad,
+               stub modal, …) to proceed; False when it went through free.
+    provider:  free-form string naming who granted the unlock ('stub', 'cpx',
+               …), or None when gated is False / the unlock was a spent credit
+               with no fresh provider event.
+    completion_id: the provider's own transaction/response id, when there is
+               one (e.g. CPX's trans_id), else None. Stored on the event but
+               NOT used as the document id unless doc_id is also passed.
+    doc_id:    explicit Firestore document id, for callers that need
+               idempotency keyed by a client- or provider-supplied id (e.g.
+               the gate-stub modal keys this by its completion_id so a
+               double-clicked OK button can't double-grant). Defaults to a
+               fresh random id, which makes the write fire-and-forget.
+
+    Best-effort and append-only for the default (random-id) case — a failure
+    here must never block the export/import it's describing, so it only logs
+    and returns None. When doc_id is given, an AlreadyExists is the caller's
+    own idempotency signal and is returned as False rather than swallowed;
+    every other failure is still swallowed and logged.
+
+    Returns True if a new event was written, False if doc_id already existed,
+    None if the write failed for any other reason (or wasn't attempted).
+
+    Only called today from gate_stub_completion(); the future gate-wiring
+    task calls this from the tourney-export, hand-export and import gate
+    paths too.
+    """
+    import uuid
+    from google.api_core import exceptions as gexc
+    from google.cloud import firestore as gcf
+    event = {
+        'kind': kind,
+        'gated': bool(gated),
+        'gate_provider': provider,
+        'at': gcf.SERVER_TIMESTAMP,
+        'gate_completion_id': completion_id,
+    }
+    ref = _user_ref(uid).collection('gate_events').document(doc_id or uuid.uuid4().hex)
+    try:
+        ref.create(event)
+        return True
+    except gexc.AlreadyExists:
+        return False
+    except Exception as exc:
+        print(f"[_record_gate_event] failed for uid={uid} kind={kind}: {type(exc).__name__}: {exc}")
+        return None
 
 
 # ── Anonymous import sessions ─────────────────────────────────────────────────
@@ -1227,6 +1616,15 @@ def cpx_postback():
         granted = False
     _user_ref(uid).collection('survey_completions').document(trans_id).update(
         {'credit_granted': bool(granted)})
+    if granted:
+        # Completion outcome for the shared gate-events audit log (Task 4) —
+        # mirrors what gate_stub_completion() does for the stub provider.
+        # kind here is 'hand'/'tourney'/'import' (the credit-kind domain);
+        # gate_events wants 'hand_export'/'tourney_export'/'import' instead.
+        # CPX is only ever opened client-side for 'tourney' today, but this
+        # endpoint is provider-generic, so map defensively rather than assume.
+        _record_gate_event(uid, _CREDIT_KIND_TO_EVENT_KIND.get(kind, kind),
+                            True, provider='cpx', completion_id=trans_id)
     return Response('1', mimetype='text/plain')
 
 
@@ -1252,6 +1650,78 @@ def _reverse_survey_credit(uid, doc_id, payload):
     except Exception as exc:
         print(f"[_reverse_survey_credit] failed for uid={uid} {doc_id}: "
               f"{type(exc).__name__}: {exc}")
+
+
+# ── Gate stub modal ("watch to unlock") ────────────────────────────────────
+# Self-hosted stand-in for a real rewarded-video ad while ayeT-Studios/Wannads
+# publisher approvals are pending — see _showGateStubModal in static/app.js.
+# Per the 2026-08-24 product-owner directive, this is not a temporary MVP
+# shim: ayeT/Wannads is shelved indefinitely, so the stub modal is the real,
+# current unlock mechanism for imports and hand exports. Tourney exports keep
+# CPX (see _tourney_export_gate / cpx_postback).
+#
+# This endpoint records that the stub ran its course AND grants the credit
+# _import_gate/_hand_export_gate actually check — the same 'grant a credit,
+# let the gate spend it' shape CPX's postback uses for hand/tourney, just
+# with 'stub' as the provider instead of 'cpx'. It does not verify the 30s
+# elapsed client-side; a technical user who bypasses the JS timer still gets
+# recorded as completed and granted the credit — acceptable for an MVP stub
+# with no real ad revenue at stake (documented as a known gap in
+# docs/firestore-schema.md).
+#
+# Recorded through the shared _record_gate_event() helper (above), keyed by
+# the client's completion_id via its doc_id param so a double-clicked OK
+# button or a retried request replays the same id and gets refused as a
+# duplicate rather than recorded (and credited) twice — _grant_credit is only
+# called when _record_gate_event proves this is a genuinely new completion.
+#
+# Gated on GATE_STUB_MODAL_ENABLED (server-side mirror of the client's own
+# check before it even shows the modal): when the flag is off, this endpoint
+# refuses rather than silently granting a credit for an ad that was never
+# shown — the clean seam AC6 asks for, ready for a real rewarded-video SDK's
+# server-to-server callback to take this route's place.
+
+_GATE_STUB_KIND_TO_CREDIT = {'import': 'import', 'hand_export': 'hand'}
+
+
+@app.route('/api/gate/stub-completion', methods=['POST'])
+def gate_stub_completion():
+    """POST /api/gate/stub-completion — records one stub-modal completion and
+    grants the credit it unlocks.
+
+    Idempotent on completion_id (client-generated once per modal open): a
+    replayed completion_id is recorded as a duplicate and does not grant a
+    second credit.
+    """
+    if not _GATE_STUB_MODAL_ENABLED:
+        return jsonify({'error': 'gate_stub_disabled'}), 503
+
+    uid = _verify_bearer(request)
+    if not uid:
+        return jsonify({'error': 'login_required'}), 401
+
+    data = request.get_json(silent=True) or {}
+    kind = (data.get('kind') or '').strip()
+    if kind not in _GATE_STUB_KINDS:
+        return jsonify({'error': f'kind must be one of {", ".join(_GATE_STUB_KINDS)}'}), 400
+    completion_id = (data.get('completion_id') or '').strip()
+    if not completion_id:
+        return jsonify({'error': 'completion_id is required'}), 400
+
+    written = _record_gate_event(uid, kind, gated=True, provider='stub',
+                                  completion_id=completion_id, doc_id=completion_id)
+    if written is None:
+        # A real Firestore failure, not just a duplicate — _record_gate_event
+        # swallows it for its fire-and-forget callers, but this endpoint's
+        # entire job is recording the completion, so surface it rather than
+        # claiming success on a write that didn't happen.
+        return jsonify({'error': 'failed_to_record'}), 500
+
+    if written:
+        _grant_credit(uid, _GATE_STUB_KIND_TO_CREDIT[kind])
+
+    return jsonify({'ok': True, 'kind': kind, 'completion_id': completion_id,
+                     'already_recorded': written is False})
 
 
 def _tally_field(fields, name):
@@ -2142,11 +2612,47 @@ def admin_pricing_set():
 
 @app.route('/api/export-ads-config', methods=['GET'])
 def export_ads_config_get():
-    """Public: the live hard/soft export limits, for the tier-comparison copy
-    on the main page (see _applyExportAdsCopy in app.js). No admin gate — these
-    numbers are shown to every visitor already, just not always accurately
-    once an admin changes them here."""
-    return jsonify(_export_ads_config())
+    """Public: the live import/export limits and gate mechanisms, for the
+    tier-comparison copy on the main page (see _applyExportAdsCopy in
+    app.js). No admin gate — these numbers are shown to every visitor
+    already, just not always accurately once an admin changes them here.
+
+    This is a *reshaped* view of the flat admin config (see
+    _export_ads_config()/_import_ads_config(), still used as-is by the
+    /api/admin/* routes and by _export_gate()) — nested by feature, with a
+    free-form `gate` string naming today's gate mechanism for each. `gate`
+    is deliberately not an enum: a future Feature shipping real Rewarded
+    Video will change these values (e.g. to 'ayet_rewarded_video') with no
+    shape change here.
+
+    hand_export block's shape is unchanged from the admin config (still
+    hand_hard_limit/hand_soft_limit) — only its `gate` value is new.
+    tourney_export is reshaped from the legacy tourney_hard_limit/
+    tourney_soft_limit pair to the new lifetime_free/weekly_limit model
+    (see _EXPORT_ADS_DEFAULTS). import is new, sourced from
+    _import_ads_config().
+    """
+    export_cfg = _export_ads_config()
+    import_cfg = _import_ads_config()
+    return jsonify({
+        'hand_export': {
+            'hand_hard_limit': export_cfg['hand_hard_limit'],
+            'hand_soft_limit': export_cfg['hand_soft_limit'],
+            'gate': 'stub_modal',
+        },
+        'tourney_export': {
+            'lifetime_free': export_cfg['tourney_lifetime_free'],
+            'weekly_limit': export_cfg['tourney_weekly_limit'],
+            'gate': 'cpx_survey',
+        },
+        'import': {
+            'free': import_cfg['free'],
+            'gated': import_cfg['gated'],
+            'total': import_cfg['free'] + import_cfg['gated'],
+            'cadence': 'daily',
+            'gate': 'stub_modal',
+        },
+    })
 
 
 @app.route('/api/admin/export-ads-config', methods=['GET'])
@@ -2171,7 +2677,8 @@ def admin_export_ads_config_set():
 
     update = {}
     for key in ('hand_hard_limit', 'hand_soft_limit',
-                'tourney_hard_limit', 'tourney_soft_limit'):
+                'tourney_hard_limit', 'tourney_soft_limit',
+                'tourney_lifetime_free', 'tourney_weekly_limit'):
         if key in body:
             val = body[key]
             if isinstance(val, bool) or not isinstance(val, int) or val < 0:
@@ -2184,6 +2691,42 @@ def admin_export_ads_config_set():
     update['updated_by'] = uid
     _get_admin_db().collection('config').document('export_ads').set(update, merge=True)
     return jsonify(_export_ads_config())
+
+
+@app.route('/api/admin/import-ads-config', methods=['GET'])
+def admin_import_ads_config_get():
+    uid = _verify_bearer(request)
+    if not _is_admin(uid):
+        return jsonify({'error': 'Forbidden'}), 403
+    return jsonify(_import_ads_config())
+
+
+@app.route('/api/admin/import-ads-config', methods=['POST'])
+def admin_import_ads_config_set():
+    """Whole-config replace of the fields present in the body — merge='True'
+    on the Firestore write, so an admin can change one field without resending
+    the other, but each field present is validated on its own type."""
+    uid = _verify_bearer(request)
+    if not _is_admin(uid):
+        return jsonify({'error': 'Forbidden'}), 403
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify({'error': 'Malformed request body'}), 400
+
+    update = {}
+    for key in ('free', 'gated'):
+        if key in body:
+            val = body[key]
+            if isinstance(val, bool) or not isinstance(val, int) or val < 0:
+                return jsonify({'error': f'{key} must be a non-negative integer'}), 400
+            update[key] = val
+    if not update:
+        return jsonify({'error': 'No recognised fields in request body'}), 400
+
+    update['updated_at'] = int(time.time())
+    update['updated_by'] = uid
+    _get_admin_db().collection('config').document('import_ads').set(update, merge=True)
+    return jsonify(_import_ads_config())
 
 
 def _fetch_tournament_records(uid, tourney_id):

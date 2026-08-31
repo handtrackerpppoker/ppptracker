@@ -1,0 +1,27 @@
+name: Mirror main to upstream
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: mirror-upstream
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Push main to handtrackerpppoker/ppptracker
+        env:
+          UPSTREAM_TOKEN: ${{ secrets.UPSTREAM_TOKEN }}
+        run: |
+          set -euo pipefail
+          git remote add upstream "https://x-access-token:${UPSTREAM_TOKEN}@github.com/handtrackerpppoker/ppptracker.git"
+          git push upstream HEAD:refs/heads/main
