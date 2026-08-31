@@ -822,6 +822,24 @@ function _fmtNum(n) {
   return Number(n || 0).toLocaleString('en-AU');
 }
 
+/** Simple network connectivity indicator, driven by navigator.onLine + online/offline events. */
+function _initConnStatus() {
+  const el    = document.getElementById('conn-status');
+  const label = document.getElementById('conn-status-label');
+  if (!el || !label) return;
+  const onlineText  = el.dataset.onlineLabel  || 'Online';
+  const offlineText = el.dataset.offlineLabel || 'Offline';
+  const update = () => {
+    const online = navigator.onLine;
+    el.classList.toggle('conn-offline', !online);
+    el.classList.toggle('conn-online', online);
+    label.textContent = online ? onlineText : offlineText;
+  };
+  window.addEventListener('online', update);
+  window.addEventListener('offline', update);
+  update();
+}
+
 /** Refresh the two rewards blocks flanking the title. No-op when signed out — they stay hidden. */
 function _loadGamification() {
   const left  = document.getElementById('gam-block-left');
@@ -3394,6 +3412,8 @@ function exportTournament(tourneyId, btn) {
 /* ── Init ────────────────────────────────────────────────── */
 
 document.addEventListener('DOMContentLoaded', () => {
+  _initConnStatus();
+
   document.getElementById('url-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') handleImport();
   });

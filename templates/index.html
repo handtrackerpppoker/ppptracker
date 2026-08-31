@@ -35,37 +35,44 @@
 <!-- Outer container is now <main> for landmark (Fix 5 & 6) -->
 <main id="main-content" class="container-fluid py-4 px-3 px-md-5">
 
-  <!-- ── Auth bar + Timezone row ─────────────────────────── -->
-  <div style="max-width:1400px;margin:0 auto">
-  <div class="d-flex align-items-center justify-content-between mb-2 gap-2">
-    <div id="auth-bar" class="auth-bar"></div>
-    <div class="d-flex align-items-center gap-2">
-    <!-- Revealed by _checkAdmin() once the signed-in user is confirmed admin -->
-    <a href="/admin" id="admin-nav-btn" class="auth-chip admin-chip d-none">
-      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      {{ _('Admin') }}
-    </a>
-    <div class="player-tz">
-      <span class="tz-label">{{ _('Language') }}</span>
-      <select id="lang-select" class="tz-select form-select form-select-sm" aria-label="{{ _('Language') }}">
-        <option value="en" {{ 'selected' if current_locale == 'en' }}>EN</option>
-        <option value="pt_BR" {{ 'selected' if current_locale == 'pt_BR' }}>PT-BR</option>
-      </select>
+  <!-- ── Header row: identity (auth + connection) left, settings right ───
+       flex-wrap on both clusters keeps every control on its own line
+       instead of overlapping as the viewport narrows. -->
+  <div class="header-row" style="max-width:1400px;margin:0 auto">
+    <div class="header-row-left">
+      <div id="auth-bar" class="auth-bar"></div>
+      <span id="conn-status" class="conn-status conn-online" role="status" aria-live="polite"
+            data-online-label="{{ _('Online') }}" data-offline-label="{{ _('Offline') }}">
+        <span class="conn-dot" aria-hidden="true"></span>
+        <span id="conn-status-label">{{ _('Online') }}</span>
+      </span>
     </div>
-    <div class="player-tz">
-      <span class="tz-label">{{ _('Timezone') }}</span>
-      <select id="tz-select" class="tz-select form-select form-select-sm" aria-label="{{ _('Timezone') }}">
-        <option value="Australia/Adelaide">ADL</option>
-        <option value="Australia/Brisbane">BNE</option>
-        <option value="Australia/Darwin">DRW</option>
-        <option value="Australia/Melbourne">MEL</option>
-        <option value="Australia/Perth">PER</option>
-        <option value="Australia/Sydney">SYD</option>
-        <option value="UTC">UTC</option>
-      </select>
+    <div class="header-row-right">
+      <!-- Revealed by _checkAdmin() once the signed-in user is confirmed admin -->
+      <a href="/admin" id="admin-nav-btn" class="auth-chip admin-chip d-none">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        {{ _('Admin') }}
+      </a>
+      <div class="player-tz">
+        <span class="tz-label">{{ _('Language') }}</span>
+        <select id="lang-select" class="tz-select form-select form-select-sm" aria-label="{{ _('Language') }}">
+          <option value="en" {{ 'selected' if current_locale == 'en' }}>EN</option>
+          <option value="pt_BR" {{ 'selected' if current_locale == 'pt_BR' }}>PT-BR</option>
+        </select>
+      </div>
+      <div class="player-tz">
+        <span class="tz-label">{{ _('Timezone') }}</span>
+        <select id="tz-select" class="tz-select form-select form-select-sm" aria-label="{{ _('Timezone') }}">
+          <option value="Australia/Adelaide">ADL</option>
+          <option value="Australia/Brisbane">BNE</option>
+          <option value="Australia/Darwin">DRW</option>
+          <option value="Australia/Melbourne">MEL</option>
+          <option value="Australia/Perth">PER</option>
+          <option value="Australia/Sydney">SYD</option>
+          <option value="UTC">UTC</option>
+        </select>
+      </div>
     </div>
-    </div>
-  </div>
   </div>
 
   <!-- ── Header, flanked by the two rewards blocks ─────────────

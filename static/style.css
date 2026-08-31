@@ -964,6 +964,52 @@ body {
 }
 .info-badge-btn:hover { opacity: 1; color: var(--green); }
 
+/* ── Header row (auth + connection status left, settings right) ─────
+   flex-wrap on both clusters means a narrow viewport wraps controls onto
+   their own line instead of shrinking/overlapping them. */
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: .5rem;
+}
+.header-row-left,
+.header-row-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Simple network connectivity indicator, driven by navigator.onLine
+   (see _initConnStatus in app.js). */
+.conn-status {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font-family: var(--font-head);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .3px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent-green);
+  box-shadow: 0 0 6px var(--color-accent-green);
+  flex-shrink: 0;
+}
+.conn-status.conn-offline { color: var(--red); }
+.conn-status.conn-offline .conn-dot {
+  background: var(--red);
+  box-shadow: 0 0 6px var(--red);
+}
+
 /* ── Auth bar ─────────────────────────────────────────────── */
 .auth-bar {
   display: flex;
