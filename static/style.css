@@ -69,7 +69,6 @@ body {
   letter-spacing: clamp(1px, 1vw, 4px);
   text-transform: uppercase;
   text-shadow: 0 0 24px rgba(0,230,118,.3);
-  white-space: nowrap;
 }
 
 .app-tagline {
