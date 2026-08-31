@@ -1135,8 +1135,23 @@
     unlockReady:        "{{ _('Unlock') }}"
   };
   window.GATE_STUB_MODAL_ENABLED = {{ 'true' if gate_stub_modal_enabled else 'false' }};
+  {# Same hand-over as I18N_AUTH/I18N_GATE_STUB above, for the survey-unlock
+     modal's dynamic bits (openSurveyModal/_surveyStatus in app.js) — the
+     kind label and every _surveyStatus() message. #}
+  window.I18N_SURVEY = {
+    kindLabelTourney:  "{{ _('one tournament export') }}",
+    kindLabelHand:     "{{ _('one more hand export') }}",
+    loadingSurvey:     "{{ _('Loading a survey…') }}",
+    completeCpx:       "{{ _('Complete the survey to unlock your export.') }}",
+    completeTally:     "{{ _('Answer a few quick questions to unlock your export.') }}",
+    noSurveysAvailable: "{{ _('No surveys are available right now — please try again later.') }}",
+    noSurveysFallback: "{{ _('No surveys available right now — here are a few quick questions instead.') }}",
+    checkingUnlock:    "{{ _('Checking your unlock…') }}",
+    stillWaiting:      "{{ _('Still waiting on the survey provider. Your credit is safe — close this and retry the export in a bit, it will pick up automatically once the survey lands.') }}",
+    unlocked:          "{{ _('Unlocked — starting your export…') }}"
+  };
 </script>
-<script src="/static/app.js?v=63"></script>
+<script src="/static/app.js?v=64"></script>
 <script>
   if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
     navigator.serviceWorker.register('/static/sw.js', { scope: '/' })

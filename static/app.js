@@ -276,12 +276,14 @@ async function openSurveyModal(kind, retry) {
 
   const modalEl = document.getElementById('survey-modal');
   if (!modalEl) return;
+  const I = window.I18N_SURVEY || {};
   const label = document.getElementById('survey-kind-label');
   if (label) {
     label.textContent = kind === 'tourney'
-      ? 'one tournament export' : 'one more hand export';
+      ? (I.kindLabelTourney || 'one tournament export')
+      : (I.kindLabelHand || 'one more hand export');
   }
-  _surveyStatus('Loading a survey…');
+  _surveyStatus(I.loadingSurvey || 'Loading a survey…');
   const frame = document.getElementById('survey-frame');
   if (frame) frame.removeAttribute('src');
   const fallbackBtn = document.getElementById('survey-fallback-btn');
@@ -306,7 +308,7 @@ async function openSurveyModal(kind, retry) {
   } else if (cfg.tally_form_url) {
     _surveyShowTally(cfg.tally_form_url, kind);
   } else {
-    _surveyStatus('No surveys are available right now — please try again later.', 'err');
+    _surveyStatus(I.noSurveysAvailable || 'No surveys are available right now — please try again later.', 'err');
     return;
   }
   if (cfg.tally_form_url && fallbackBtn) fallbackBtn.classList.remove('d-none');
@@ -332,7 +334,7 @@ function _surveyShowCpx(cpx, kind) {
   });
   if (cpx.secure_hash) params.set('secure_hash', cpx.secure_hash);
   frame.src = `https://offers.cpx-research.com/index.php?${params.toString()}`;
-  _surveyStatus('Complete the survey to unlock your export.');
+  _surveyStatus((window.I18N_SURVEY || {}).completeCpx || 'Complete the survey to unlock your export.');
   _trackEvent('survey_provider_shown', { provider: 'cpx', kind });
 }
 
@@ -349,7 +351,7 @@ function _surveyShowTally(formUrl, kind) {
   if (!frame) return;
   const sep = formUrl.includes('?') ? '&' : '?';
   frame.src = `${formUrl}${sep}uid=${encodeURIComponent(_currentUser.uid)}&kind=${encodeURIComponent(kind)}`;
-  _surveyStatus('Answer a few quick questions to unlock your export.');
+  _surveyStatus((window.I18N_SURVEY || {}).completeTally || 'Answer a few quick questions to unlock your export.');
   _trackEvent('survey_provider_shown', { provider: 'tally', kind });
 }
 
@@ -392,9 +394,10 @@ function _surveyStartPolling() {
       return;
     }
     if (Date.now() > _surveyState.deadline) {
-      _surveyStatus('Still waiting on the survey provider. Your credit is safe — close '
-                    + 'this and retry the export in a bit, it will pick up automatically '
-                    + 'once the survey lands.', 'err');
+      _surveyStatus((window.I18N_SURVEY || {}).stillWaiting
+        || 'Still waiting on the survey provider. Your credit is safe — close this and '
+           + 'retry the export in a bit, it will pick up automatically once the survey '
+           + 'lands.', 'err');
       return;
     }
     _surveyState.timer = setTimeout(tick, nextInterval());
@@ -406,7 +409,7 @@ function _surveyEarned() {
   const retry = _surveyState.retry;
   const kind  = _surveyState.kind;
   clearTimeout(_surveyState.timer);
-  _surveyStatus('Unlocked — starting your export…', 'ok');
+  _surveyStatus((window.I18N_SURVEY || {}).unlocked || 'Unlocked — starting your export…', 'ok');
   _trackEvent('survey_completed', { kind });
   setTimeout(() => {
     closeSurveyModal();
@@ -3526,16 +3529,17 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('message', (ev) => {
     if (!_surveyState.kind) return;
     const raw = typeof ev.data === 'string' ? ev.data : JSON.stringify(ev.data || '');
+    const I = window.I18N_SURVEY || {};
     if (/no[_\s-]?surveys|no_offers|noSurveysAvailable/i.test(raw)) {
       const url = (_surveyState.config || {}).tally_form_url;
       if (url) {
-        _surveyStatus('No surveys available right now — here are a few quick questions instead.');
+        _surveyStatus(I.noSurveysFallback || 'No surveys available right now — here are a few quick questions instead.');
         _surveyShowTally(url, _surveyState.kind);
       } else {
-        _surveyStatus('No surveys are available right now — please try again later.', 'err');
+        _surveyStatus(I.noSurveysAvailable || 'No surveys are available right now — please try again later.', 'err');
       }
     } else if (/complete|finished|success/i.test(raw)) {
-      _surveyStatus('Checking your unlock…');
+      _surveyStatus(I.checkingUnlock || 'Checking your unlock…');
       _surveyStartPolling();
     }
   });

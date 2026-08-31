@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-31 14:55+0930\n"
+"POT-Creation-Date: 2026-08-31 16:50+0930\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,7 +34,7 @@ msgstr ""
 msgid "Skip to main content"
 msgstr ""
 
-#: templates/index.html:43
+#: templates/index.html:43 templates/index.html:306
 msgid "Promotional banner"
 msgstr ""
 
@@ -90,7 +90,7 @@ msgstr ""
 msgid "What this tool does"
 msgstr ""
 
-#: templates/index.html:131 templates/index.html:901
+#: templates/index.html:131 templates/index.html:910
 msgid "The Tool"
 msgstr ""
 
@@ -98,7 +98,7 @@ msgstr ""
 msgid "Step-by-step guide"
 msgstr ""
 
-#: templates/index.html:137 templates/index.html:928
+#: templates/index.html:137 templates/index.html:937
 msgid "How to Use"
 msgstr ""
 
@@ -106,7 +106,7 @@ msgstr ""
 msgid "Free vs Pro — what you get"
 msgstr ""
 
-#: templates/index.html:143 templates/index.html:979
+#: templates/index.html:143 templates/index.html:988
 msgid "Free vs Pro"
 msgstr ""
 
@@ -114,7 +114,7 @@ msgstr ""
 msgid "What's new in each version"
 msgstr ""
 
-#: templates/index.html:149 templates/index.html:1021
+#: templates/index.html:149 templates/index.html:1030
 msgid "Release Notes"
 msgstr ""
 
@@ -155,7 +155,7 @@ msgid "PRO —"
 msgstr ""
 
 #: templates/index.html:178 templates/index.html:186 templates/index.html:274
-#: templates/index.html:1007
+#: templates/index.html:1016
 msgid "Early Access"
 msgstr ""
 
@@ -203,10 +203,10 @@ msgstr ""
 msgid "Export Accuracy Notice"
 msgstr ""
 
-#: templates/index.html:228 templates/index.html:263 templates/index.html:648
-#: templates/index.html:701 templates/index.html:722 templates/index.html:780
-#: templates/index.html:882 templates/index.html:903 templates/index.html:930
-#: templates/index.html:981 templates/index.html:1023
+#: templates/index.html:228 templates/index.html:263 templates/index.html:659
+#: templates/index.html:711 templates/index.html:732 templates/index.html:790
+#: templates/index.html:891 templates/index.html:912 templates/index.html:939
+#: templates/index.html:990 templates/index.html:1032
 msgid "Close"
 msgstr ""
 
@@ -241,12 +241,12 @@ msgstr ""
 msgid "Don't show this again"
 msgstr ""
 
-#: templates/index.html:246 templates/index.html:675 templates/index.html:812
+#: templates/index.html:246 templates/index.html:686 templates/index.html:822
 msgid "Cancel"
 msgstr ""
 
-#: templates/index.html:247 templates/index.html:367 templates/index.html:396
-#: templates/index.html:551 templates/index.html:628
+#: templates/index.html:247 templates/index.html:378 templates/index.html:407
+#: templates/index.html:562 templates/index.html:639
 msgid "Export"
 msgstr ""
 
@@ -274,7 +274,7 @@ msgstr ""
 msgid "until we launch globally. Cancel any time."
 msgstr ""
 
-#: templates/index.html:283 templates/index.html:1008
+#: templates/index.html:283 templates/index.html:1017
 msgid "Get Early Access — A$7.99/month"
 msgstr ""
 
@@ -286,392 +286,392 @@ msgstr ""
 msgid "Pro-test — A$0.50/month (test sub)"
 msgstr ""
 
-#: templates/index.html:310 templates/index.html:433
+#: templates/index.html:321 templates/index.html:444
 msgid "Hands"
 msgstr ""
 
-#: templates/index.html:311
+#: templates/index.html:322
 msgid "Flop"
 msgstr ""
 
-#: templates/index.html:312
+#: templates/index.html:323
 msgid "Turn"
 msgstr ""
 
-#: templates/index.html:313
+#: templates/index.html:324
 msgid "River"
 msgstr ""
 
-#: templates/index.html:314
+#: templates/index.html:325
 msgid "SD"
 msgstr ""
 
-#: templates/index.html:315
+#: templates/index.html:326
 msgid "Won"
 msgstr ""
 
-#: templates/index.html:327
+#: templates/index.html:338
 msgid "Export All Hands"
 msgstr ""
 
-#: templates/index.html:328
+#: templates/index.html:339
 msgid "About conversion accuracy"
 msgstr ""
 
-#: templates/index.html:352
+#: templates/index.html:363
 msgid "Last 3 Hands"
 msgstr ""
 
-#: templates/index.html:362 templates/index.html:391 templates/index.html:546
-#: templates/index.html:623
+#: templates/index.html:373 templates/index.html:402 templates/index.html:557
+#: templates/index.html:634
 msgid "When"
 msgstr ""
 
-#: templates/index.html:363 templates/index.html:392 templates/index.html:547
-#: templates/index.html:624
+#: templates/index.html:374 templates/index.html:403 templates/index.html:558
+#: templates/index.html:635
 msgid "Hole Cards"
 msgstr ""
 
-#: templates/index.html:364 templates/index.html:393 templates/index.html:548
-#: templates/index.html:625
+#: templates/index.html:375 templates/index.html:404 templates/index.html:559
+#: templates/index.html:636
 msgid "Position"
 msgstr ""
 
-#: templates/index.html:365 templates/index.html:394 templates/index.html:549
-#: templates/index.html:626
+#: templates/index.html:376 templates/index.html:405 templates/index.html:560
+#: templates/index.html:637
 msgid "Street"
 msgstr ""
 
-#: templates/index.html:366 templates/index.html:395 templates/index.html:550
-#: templates/index.html:627
+#: templates/index.html:377 templates/index.html:406 templates/index.html:561
+#: templates/index.html:638
 msgid "Net P/L (BB)"
 msgstr ""
 
-#: templates/index.html:368 templates/index.html:397 templates/index.html:552
-#: templates/index.html:629
+#: templates/index.html:379 templates/index.html:408 templates/index.html:563
+#: templates/index.html:640
 msgid "Replay"
 msgstr ""
 
-#: templates/index.html:381
+#: templates/index.html:392
 msgid "Last 3 Winning Hands"
 msgstr ""
 
-#: templates/index.html:416
+#: templates/index.html:427
 msgid "Tournament History"
 msgstr ""
 
-#: templates/index.html:419 templates/index.html:420
+#: templates/index.html:430 templates/index.html:431
 #, python-format
 msgid ""
 "Buy-in, ITM%%, and finishing position are not available in the PPPoker "
 "API data."
 msgstr ""
 
-#: templates/index.html:428
+#: templates/index.html:439
 msgid "Date"
 msgstr ""
 
-#: templates/index.html:429
+#: templates/index.html:440
 msgid "Room"
 msgstr ""
 
-#: templates/index.html:430
+#: templates/index.html:441
 msgid "Sit Down Time"
 msgstr ""
 
-#: templates/index.html:431
+#: templates/index.html:442
 msgid "Time Played"
 msgstr ""
 
-#: templates/index.html:432 templates/index.html:472
+#: templates/index.html:443 templates/index.html:483
 msgid "Type"
 msgstr ""
 
-#: templates/index.html:434
+#: templates/index.html:445
 msgid "Export Format"
 msgstr ""
 
-#: templates/index.html:452
+#: templates/index.html:463
 msgid "Tournament Summary"
 msgstr ""
 
-#: templates/index.html:457 templates/index.html:576
+#: templates/index.html:468 templates/index.html:587
 msgid "Interval"
 msgstr ""
 
-#: templates/index.html:459 templates/index.html:578
+#: templates/index.html:470 templates/index.html:589
 msgid "All"
 msgstr ""
 
-#: templates/index.html:460 templates/index.html:579
+#: templates/index.html:471 templates/index.html:590
 msgid "Today"
 msgstr ""
 
-#: templates/index.html:461 templates/index.html:580
+#: templates/index.html:472 templates/index.html:591
 msgid "This Week"
 msgstr ""
 
-#: templates/index.html:462 templates/index.html:581
+#: templates/index.html:473 templates/index.html:592
 msgid "This Month"
 msgstr ""
 
-#: templates/index.html:470
+#: templates/index.html:481
 msgid "Tournament"
 msgstr ""
 
-#: templates/index.html:471
+#: templates/index.html:482
 msgid "Events"
 msgstr ""
 
-#: templates/index.html:473 templates/index.html:591
+#: templates/index.html:484 templates/index.html:602
 msgid "Seats"
 msgstr ""
 
-#: templates/index.html:474 templates/index.html:592
+#: templates/index.html:485 templates/index.html:603
 msgid "Avg Hands"
 msgstr ""
 
-#: templates/index.html:475 templates/index.html:593
+#: templates/index.html:486 templates/index.html:604
 msgid "Avg Duration"
 msgstr ""
 
-#: templates/index.html:476 templates/index.html:594
+#: templates/index.html:487 templates/index.html:605
 msgid "Hands/hr"
 msgstr ""
 
-#: templates/index.html:477 templates/index.html:595
+#: templates/index.html:488 templates/index.html:606
 msgid "Last Played"
 msgstr ""
 
-#: templates/index.html:481 templates/index.html:599
+#: templates/index.html:492 templates/index.html:610
 msgid "Loading…"
 msgstr ""
 
-#: templates/index.html:494
+#: templates/index.html:505
 msgid "Tournament Details"
 msgstr ""
 
-#: templates/index.html:501
+#: templates/index.html:512
 msgid ""
 "Graph cannot be displayed because this tournament configuration is "
 "incomplete."
 msgstr ""
 
-#: templates/index.html:505
+#: templates/index.html:516
 msgid "Stack"
 msgstr ""
 
-#: templates/index.html:506
+#: templates/index.html:517
 msgid "Chips"
 msgstr ""
 
-#: templates/index.html:507
+#: templates/index.html:518
 msgid "BBs"
 msgstr ""
 
-#: templates/index.html:511
+#: templates/index.html:522
 msgid "Show played hands only"
 msgstr ""
 
-#: templates/index.html:511
+#: templates/index.html:522
 msgid "PH"
 msgstr ""
 
-#: templates/index.html:513
+#: templates/index.html:524
 msgid "Duration"
 msgstr ""
 
-#: templates/index.html:514
+#: templates/index.html:525
 msgid "Time"
 msgstr ""
 
-#: templates/index.html:522
+#: templates/index.html:533
 msgid "Hand details"
 msgstr ""
 
-#: templates/index.html:526
+#: templates/index.html:537
 msgid "Graph legend"
 msgstr ""
 
-#: templates/index.html:527
+#: templates/index.html:538
 msgid "Hand won"
 msgstr ""
 
-#: templates/index.html:528
+#: templates/index.html:539
 msgid "Hand lost"
 msgstr ""
 
-#: templates/index.html:529
+#: templates/index.html:540
 msgid "Reached showdown"
 msgstr ""
 
-#: templates/index.html:530
+#: templates/index.html:541
 msgid "Biggest win"
 msgstr ""
 
-#: templates/index.html:531
+#: templates/index.html:542
 msgid "Biggest loss"
 msgstr ""
 
-#: templates/index.html:532
+#: templates/index.html:543
 msgid "Rebuy"
 msgstr ""
 
-#: templates/index.html:533
+#: templates/index.html:544
 msgid "Add-on"
 msgstr ""
 
-#: templates/index.html:534
+#: templates/index.html:545
 msgid "Busted"
 msgstr ""
 
-#: templates/index.html:535
+#: templates/index.html:546
 msgid "Stage (hover the line)"
 msgstr ""
 
-#: templates/index.html:536
+#: templates/index.html:547
 msgid "Dots mark only hands you played"
 msgstr ""
 
-#: templates/index.html:556
+#: templates/index.html:567
 msgid "Select a tournament above to view its hands."
 msgstr ""
 
-#: templates/index.html:571
+#: templates/index.html:582
 msgid "Cash & Play Money Games"
 msgstr ""
 
-#: templates/index.html:589
+#: templates/index.html:600
 msgid "Session"
 msgstr ""
 
-#: templates/index.html:590
+#: templates/index.html:601
 msgid "Sessions"
 msgstr ""
 
-#: templates/index.html:612
+#: templates/index.html:623
 msgid "Cash & Play Money Session Details"
 msgstr ""
 
-#: templates/index.html:633
+#: templates/index.html:644
 msgid "Select a cash or play money session above to view its hands."
 msgstr ""
 
-#: templates/index.html:647
+#: templates/index.html:658
 msgid "DATE RANGE FILTER"
 msgstr ""
 
-#: templates/index.html:653
+#: templates/index.html:664
 msgid "FROM"
 msgstr ""
 
-#: templates/index.html:658
+#: templates/index.html:669
 msgid "TO"
 msgstr ""
 
-#: templates/index.html:665
+#: templates/index.html:676
 msgid "QUICK RANGE"
 msgstr ""
 
-#: templates/index.html:665
+#: templates/index.html:676
 msgid "30 days"
 msgstr ""
 
-#: templates/index.html:670
+#: templates/index.html:681
 msgid "1 week"
 msgstr ""
 
-#: templates/index.html:670
+#: templates/index.html:681
 msgid "1 year"
 msgstr ""
 
-#: templates/index.html:678
+#: templates/index.html:688
 msgid "Apply"
 msgstr ""
 
-#: templates/index.html:699 templates/index.html:749 templates/index.html:1126
+#: templates/index.html:709 templates/index.html:759 templates/index.html:1135
 msgid "Unlock"
 msgstr ""
 
-#: templates/index.html:699
+#: templates/index.html:709
 msgid "one more export"
 msgstr ""
 
-#: templates/index.html:705
+#: templates/index.html:715
 msgid ""
 "Answer a short survey and your export starts automatically. Nothing is "
 "charged, and you can close this at any time."
 msgstr ""
 
-#: templates/index.html:720
+#: templates/index.html:730
 msgid "No surveys available? Answer a few quick questions instead"
 msgstr ""
 
-#: templates/index.html:754
+#: templates/index.html:764
 msgid "This app is in Early Access — normally a short ad would play here."
 msgstr ""
 
-#: templates/index.html:757
+#: templates/index.html:767
 msgid "Go Pro for unlimited"
 msgstr ""
 
-#: templates/index.html:757
+#: templates/index.html:767
 msgid "— no ads, no waiting."
 msgstr ""
 
-#: templates/index.html:759
+#: templates/index.html:769
 msgid "Go Pro"
 msgstr ""
 
-#: templates/index.html:764
+#: templates/index.html:774
 msgid "Or wait 30 seconds to unlock this one."
 msgstr ""
 
-#: templates/index.html:778 templates/index.html:1100
+#: templates/index.html:788 templates/index.html:1109
 msgid "Sign in"
 msgstr ""
 
-#: templates/index.html:797
+#: templates/index.html:807
 msgid "Continue with Google"
 msgstr ""
 
-#: templates/index.html:801
+#: templates/index.html:811
 msgid "or"
 msgstr ""
 
-#: templates/index.html:804
+#: templates/index.html:814
 msgid "Email a magic link — no password needed."
 msgstr ""
 
-#: templates/index.html:807
+#: templates/index.html:817
 msgid "Email address"
 msgstr ""
 
-#: templates/index.html:815
+#: templates/index.html:824
 msgid "Send Magic Link"
 msgstr ""
 
-#: templates/index.html:827
+#: templates/index.html:836
 msgid "© 2026 PPPoker Hand Tracker — Built by a punter, for punters"
 msgstr ""
 
-#: templates/index.html:829
+#: templates/index.html:838
 msgid "Not affiliated with PPPoker"
 msgstr ""
 
-#: templates/index.html:831
+#: templates/index.html:840
 msgid "About me"
 msgstr ""
 
-#: templates/index.html:837
+#: templates/index.html:846
 msgid "Legal, Privacy & Responsible Gambling"
 msgstr ""
 
-#: templates/index.html:843
+#: templates/index.html:852
 msgid "Legal & Compliance"
 msgstr ""
 
-#: templates/index.html:844
+#: templates/index.html:853
 msgid ""
 "PPPoker Hand Tracker is an independent tool for educational and study "
 "purposes only. It is not affiliated with, endorsed by, or connected to "
@@ -679,39 +679,39 @@ msgid ""
 " your own discretion."
 msgstr ""
 
-#: templates/index.html:845
+#: templates/index.html:854
 msgid ""
 "This tool does not facilitate gambling, accept wagers, or process any "
 "financial transactions. It is a hand history converter intended to assist"
 " players in reviewing their own gameplay."
 msgstr ""
 
-#: templates/index.html:849
+#: templates/index.html:858
 msgid "Responsible Gambling"
 msgstr ""
 
-#: templates/index.html:850
+#: templates/index.html:859
 msgid ""
 "You must be 18 years of age or older to use poker platforms in Australia."
 " If gambling is causing distress for you or someone you know, free "
 "confidential support is available 24/7:"
 msgstr ""
 
-#: templates/index.html:852
+#: templates/index.html:861
 msgid "Gambling Help Online"
 msgstr ""
 
-#: templates/index.html:855
+#: templates/index.html:864
 msgid ""
 "Online gambling is regulated in Australia under the <em>Interactive "
 "Gambling Act 2001</em>. This tool does not constitute a gambling service."
 msgstr ""
 
-#: templates/index.html:859
+#: templates/index.html:868
 msgid "Data & Security"
 msgstr ""
 
-#: templates/index.html:860
+#: templates/index.html:869
 msgid ""
 "This tool operates in accordance with the <em>Privacy Act 1988 (Cth)</em>"
 " and the Australian Privacy Principles. No PPPoker account credentials, "
@@ -719,35 +719,35 @@ msgid ""
 "transmitted."
 msgstr ""
 
-#: templates/index.html:861
+#: templates/index.html:870
 msgid ""
 "The only data processed is the hand history contained in the public "
 "replay link you voluntarily provide. An anonymous session ID is stored "
 "locally in your browser to track your daily single-hand export usage ("
 msgstr ""
 
-#: templates/index.html:861
+#: templates/index.html:870
 msgid "5/day"
 msgstr ""
 
-#: templates/index.html:861
+#: templates/index.html:870
 msgid ""
 " on the free tier). No personally identifiable information is collected "
 "or sold."
 msgstr ""
 
-#: templates/index.html:862
+#: templates/index.html:871
 #, python-format
 msgid ""
 "Conversion accuracy is 95%%+ across tested hand types. Exported files are"
 " for study purposes only — not official records."
 msgstr ""
 
-#: templates/index.html:880
+#: templates/index.html:889
 msgid "About Me"
 msgstr ""
 
-#: templates/index.html:885
+#: templates/index.html:894
 msgid ""
 "Hey everyone! Just a regular Aussie poker player here who got hooked on "
 "PPPoker a while back. The games are good, the action is decent, and the "
@@ -755,7 +755,7 @@ msgid ""
 "<strong>you can't study your hands.</strong>"
 msgstr ""
 
-#: templates/index.html:886
+#: templates/index.html:895
 msgid ""
 "PokerTracker, DriveHUD, GTO Wizard — all the serious training tools need "
 "a hand history file. PPPoker doesn't give you one. Their replay system is"
@@ -764,7 +764,7 @@ msgid ""
 "one in a clunky mobile viewer."
 msgstr ""
 
-#: templates/index.html:887
+#: templates/index.html:896
 msgid ""
 "I got frustrated enough to do something about it. With the help of AI "
 "tools, I built <strong>PPPoker Hand Tracker</strong> — a web app that "
@@ -772,45 +772,45 @@ msgid ""
 "a format that actually works with your training software."
 msgstr ""
 
-#: templates/index.html:888
+#: templates/index.html:897
 msgid ""
 "No poker background in software development. No team. Just a player who "
 "wanted better tools and figured out how to build them. If it helps your "
 "game even a little, it was worth it. ♠"
 msgstr ""
 
-#: templates/index.html:906
+#: templates/index.html:915
 msgid ""
 "<strong>PPPoker Hand Tracker</strong> bridges the gap between PPPoker and"
 " your training software. Here's what it does:"
 msgstr ""
 
-#: templates/index.html:908
+#: templates/index.html:917
 msgid ""
 "<strong>Fetches your hands</strong> directly from PPPoker's API using "
 "your hand review link — no installs, no file uploads, no screen scraping."
 msgstr ""
 
-#: templates/index.html:909
+#: templates/index.html:918
 msgid ""
 "<strong>Converts to PokerStars format</strong> — the industry-standard "
 "hand history format accepted by PokerTracker 4, DriveHUD, and GTO Wizard."
 msgstr ""
 
-#: templates/index.html:910
+#: templates/index.html:919
 msgid ""
 "<strong>Tracks tournaments and cash sessions</strong> — every event "
 "you've played with hands logged, session length, and result, plus a per-"
 "tournament progress graph you can click through to any hand."
 msgstr ""
 
-#: templates/index.html:911
+#: templates/index.html:920
 msgid ""
 "<strong>Exports on demand</strong> — download all hands, a single hand by"
 " ID, or a full tournament in .txt or .json format."
 msgstr ""
 
-#: templates/index.html:914
+#: templates/index.html:923
 msgid ""
 "<strong>🔒 Your PPPoker account is never touched.</strong> This tool works"
 " entirely through the public hand review link PPPoker generates for you. "
@@ -819,7 +819,7 @@ msgid ""
 "history contained in the link you provide."
 msgstr ""
 
-#: templates/index.html:915
+#: templates/index.html:924
 msgid ""
 "<strong>Conversion accuracy is 95%+</strong> across the hands tested so "
 "far. The vast majority of hand types, bet sizes, and board runouts "
@@ -829,347 +829,390 @@ msgid ""
 "records."
 msgstr ""
 
-#: templates/index.html:936
+#: templates/index.html:945
 msgid "Open PPPoker on your phone or PC"
 msgstr ""
 
-#: templates/index.html:937
+#: templates/index.html:946
 msgid "Go to your profile → Hand History. You'll see a list of recent hands."
 msgstr ""
 
-#: templates/index.html:942
+#: templates/index.html:951
 msgid "Tap any hand to open the replay"
 msgstr ""
 
-#: templates/index.html:943
+#: templates/index.html:952
 msgid ""
 "Inside the replay screen, look for a <em>Share</em> or <em>Copy Link</em>"
 " button. It produces a URL that looks like:"
 msgstr ""
 
-#: templates/index.html:949
+#: templates/index.html:958
 msgid "Paste the link here"
 msgstr ""
 
-#: templates/index.html:950
+#: templates/index.html:959
 msgid ""
 "Drop it into the input box at the top of this page and click "
 "<strong>IMPORT</strong>. The app fetches up to 200 of your most recent "
 "hands — this takes 10–30 seconds."
 msgstr ""
 
-#: templates/index.html:955
+#: templates/index.html:964
 msgid "Review your stats"
 msgstr ""
 
-#: templates/index.html:956
+#: templates/index.html:965
 msgid ""
 "Your session stats, recent hands, and tournament history all load "
 "automatically. Check your hole cards, position, and results inline."
 msgstr ""
 
-#: templates/index.html:961
+#: templates/index.html:970
 msgid "Export to your training tool"
 msgstr ""
 
-#: templates/index.html:962
+#: templates/index.html:971
 msgid ""
 "Hit <strong>PokerTracker</strong>, <strong>DriveHUD</strong>, or "
 "<strong>GTO Wizard</strong> to download a PokerStars-format .txt file. "
 "Import it into your software and start studying."
 msgstr ""
 
-#: templates/index.html:966
+#: templates/index.html:975
 msgid ""
 "Links expire after a short time. If you get a \"link expired\" error, go "
 "back to PPPoker and copy a fresh link."
 msgstr ""
 
-#: templates/index.html:984
+#: templates/index.html:993
 msgid ""
 "PPPoker Hand Tracker is free to use with sensible limits. Pro removes "
 "those limits and unlocks everything."
 msgstr ""
 
-#: templates/index.html:987
+#: templates/index.html:996
 msgid "Feature"
 msgstr ""
 
-#: templates/index.html:987
+#: templates/index.html:996
 msgid "Free"
 msgstr ""
 
-#: templates/index.html:987
+#: templates/index.html:996
 msgid "Pro"
 msgstr ""
 
-#: templates/index.html:990
+#: templates/index.html:999
 msgid "Imports"
 msgstr ""
 
-#: templates/index.html:990
+#: templates/index.html:999
 msgid "1/day (up to 3/day with a 30s wait)"
 msgstr ""
 
-#: templates/index.html:990 templates/index.html:992 templates/index.html:996
-#: templates/index.html:997
+#: templates/index.html:999 templates/index.html:1001 templates/index.html:1005
+#: templates/index.html:1006
 msgid "Unlimited"
 msgstr ""
 
-#: templates/index.html:991
+#: templates/index.html:1000
 msgid "History kept"
 msgstr ""
 
-#: templates/index.html:991
+#: templates/index.html:1000
 msgid "7 days"
 msgstr ""
 
-#: templates/index.html:991
+#: templates/index.html:1000
 msgid "Forever"
 msgstr ""
 
-#: templates/index.html:992
+#: templates/index.html:1001
 msgid "Hand history displayed"
 msgstr ""
 
-#: templates/index.html:992
+#: templates/index.html:1001
 msgid "Last 30"
 msgstr ""
 
-#: templates/index.html:993
+#: templates/index.html:1002
 msgid "Session stats & graphs"
 msgstr ""
 
-#: templates/index.html:993 templates/index.html:994
+#: templates/index.html:1002 templates/index.html:1003
 msgid "Full"
 msgstr ""
 
-#: templates/index.html:994
+#: templates/index.html:1003
 msgid "Tournament Details & progress graph"
 msgstr ""
 
-#: templates/index.html:995
+#: templates/index.html:1004
 msgid "Gamification (points, streaks, badges)"
 msgstr ""
 
-#: templates/index.html:996
+#: templates/index.html:1005
 msgid "Single-hand exports/day"
 msgstr ""
 
-#: templates/index.html:996
+#: templates/index.html:1005
 msgid "2/day (up to 5/day with a 30s wait)"
 msgstr ""
 
-#: templates/index.html:997
+#: templates/index.html:1006
 msgid "Tournament exports"
 msgstr ""
 
-#: templates/index.html:997
+#: templates/index.html:1006
 msgid "1 free ever, then 1/week (with survey)"
 msgstr ""
 
-#: templates/index.html:998
+#: templates/index.html:1007
 msgid "Export a whole session"
 msgstr ""
 
-#: templates/index.html:998
+#: templates/index.html:1007
 msgid "Locked"
 msgstr ""
 
-#: templates/index.html:998
+#: templates/index.html:1007
 msgid "Unlocked"
 msgstr ""
 
-#: templates/index.html:1002
+#: templates/index.html:1011
 msgid ""
 "Imports and hand exports need a free account. Beyond the free daily "
 "amount, waiting 30 seconds unlocks the next one — Pro never waits."
 msgstr ""
 
-#: templates/index.html:1005
+#: templates/index.html:1014
 msgid ""
 "Tournament exports need a free account. After your one lifetime free "
 "export, a short survey unlocks one more each week — Pro never surveys."
 msgstr ""
 
-#: templates/index.html:1007
+#: templates/index.html:1016
 msgid "Pro is"
 msgstr ""
 
-#: templates/index.html:1007
+#: templates/index.html:1016
 msgid "pricing is locked in until we launch globally."
 msgstr ""
 
-#: templates/index.html:1007
+#: templates/index.html:1016
 msgid "Cancel any time."
 msgstr ""
 
-#: templates/index.html:1029
+#: templates/index.html:1038
 msgid "Latest"
 msgstr ""
 
-#: templates/index.html:1031
+#: templates/index.html:1040
 msgid ""
 "Tournament progress graph — watch your stack rise and crash over a "
 "tournament, then click any point on the curve to jump straight to that "
 "hand"
 msgstr ""
 
-#: templates/index.html:1032
+#: templates/index.html:1041
 msgid ""
 "Points, streaks & weekly leaderboard — every import earns you points and "
 "unlocks badges, and there's a fresh leaderboard to climb each week"
 msgstr ""
 
-#: templates/index.html:1033
+#: templates/index.html:1042
 msgid "Pro is live — Early Access pricing locked in until we launch globally"
 msgstr ""
 
-#: templates/index.html:1040
+#: templates/index.html:1049
 msgid ""
 "Free and Pro accounts with sensible daily limits — sign in to keep your "
 "history and lift the caps"
 msgstr ""
 
-#: templates/index.html:1041
+#: templates/index.html:1050
 msgid ""
 "Cash & Play Money Games — cash tables and sit-and-gos now get their own "
 "section, separate from real-money tournaments"
 msgstr ""
 
-#: templates/index.html:1042
+#: templates/index.html:1051
 #, python-format
 msgid ""
 "Tournament Summary — buy-in, finish position, and ITM%% at a glance "
 "across every event you've played"
 msgstr ""
 
-#: templates/index.html:1049
+#: templates/index.html:1058
 msgid "Full UI redesign — gaming dark theme, Oxanium font, neon green accents"
 msgstr ""
 
-#: templates/index.html:1050
+#: templates/index.html:1059
 msgid "Free & Pro tiers introduced — freemium gates, upgrade modal"
 msgstr ""
 
-#: templates/index.html:1051
+#: templates/index.html:1060
 msgid "Firebase Analytics + Firestore session tracking added"
 msgstr ""
 
-#: templates/index.html:1052
+#: templates/index.html:1061
 msgid "Platform-specific export filenames (PokerTracker, DriveHUD, GTOWizard)"
 msgstr ""
 
-#: templates/index.html:1053
+#: templates/index.html:1062
 msgid "Export buttons redesigned as 2×2 icon grid"
 msgstr ""
 
-#: templates/index.html:1054
+#: templates/index.html:1063
 msgid "Mobile-first layout improvements throughout"
 msgstr ""
 
-#: templates/index.html:1061
+#: templates/index.html:1070
 msgid "Playing card visuals for hole cards with 4-colour suit support"
 msgstr ""
 
-#: templates/index.html:1062
+#: templates/index.html:1071
 msgid "Suit mapping corrected (clubs/hearts/spades/diamonds)"
 msgstr ""
 
-#: templates/index.html:1063
+#: templates/index.html:1072
 msgid "Hero-centric validation pills (Flop / Turn / River / Showdown)"
 msgstr ""
 
-#: templates/index.html:1064
+#: templates/index.html:1073
 msgid "Tournament History section with MTT / Satellite / Won pills"
 msgstr ""
 
-#: templates/index.html:1065
+#: templates/index.html:1074
 msgid "JSON export endpoints for hands & tournaments"
 msgstr ""
 
-#: templates/index.html:1066
+#: templates/index.html:1075
 msgid "DriveHUD replaces PokerStars branding throughout"
 msgstr ""
 
-#: templates/index.html:1067
+#: templates/index.html:1076
 msgid "Timezone selector for date/time display"
 msgstr ""
 
-#: templates/index.html:1074
+#: templates/index.html:1083
 msgid "Initial launch — proof of concept"
 msgstr ""
 
-#: templates/index.html:1075
+#: templates/index.html:1084
 msgid "PPPoker API hand fetching via share link"
 msgstr ""
 
-#: templates/index.html:1076
+#: templates/index.html:1085
 msgid "PokerStars-format hand history export"
 msgstr ""
 
-#: templates/index.html:1077
+#: templates/index.html:1086
 msgid "Basic session stats (VPIP, PFR, hands played)"
 msgstr ""
 
-#: templates/index.html:1078
+#: templates/index.html:1087
 msgid "Replay links to PPPoker hand viewer"
 msgstr ""
 
-#: templates/index.html:1101
+#: templates/index.html:1110
 msgid "Sign out"
 msgstr ""
 
-#: templates/index.html:1102
+#: templates/index.html:1111
 msgid "Auth service not available. Check Firebase config."
 msgstr ""
 
-#: templates/index.html:1103
+#: templates/index.html:1112
 msgid "Please enter your email address."
 msgstr ""
 
-#: templates/index.html:1104
+#: templates/index.html:1113
 msgid "Sending…"
 msgstr ""
 
-#: templates/index.html:1105
+#: templates/index.html:1114
 msgid "Link sent to"
 msgstr ""
 
-#: templates/index.html:1106
+#: templates/index.html:1115
 msgid "check your inbox."
 msgstr ""
 
-#: templates/index.html:1107
+#: templates/index.html:1116
 msgid "Failed to send link."
 msgstr ""
 
-#: templates/index.html:1108
+#: templates/index.html:1117
 msgid "Auth not ready — please wait a moment and try again."
 msgstr ""
 
-#: templates/index.html:1109
+#: templates/index.html:1118
 msgid "Google sign-in failed."
 msgstr ""
 
-#: templates/index.html:1121
+#: templates/index.html:1130
 msgid "this import"
 msgstr ""
 
-#: templates/index.html:1122
+#: templates/index.html:1131
 msgid "this hand export"
 msgstr ""
 
-#: templates/index.html:1123
+#: templates/index.html:1132
 msgid "imports"
 msgstr ""
 
-#: templates/index.html:1124
+#: templates/index.html:1133
 msgid "hand exports"
 msgstr ""
 
-#: templates/index.html:1125
+#: templates/index.html:1134
 #, python-format
 msgid "Unlock in %(seconds)s seconds…"
+msgstr ""
+
+#: templates/index.html:1142
+msgid "one tournament export"
+msgstr ""
+
+#: templates/index.html:1143
+msgid "one more hand export"
+msgstr ""
+
+#: templates/index.html:1144
+msgid "Loading a survey…"
+msgstr ""
+
+#: templates/index.html:1145
+msgid "Complete the survey to unlock your export."
+msgstr ""
+
+#: templates/index.html:1146
+msgid "Answer a few quick questions to unlock your export."
+msgstr ""
+
+#: templates/index.html:1147
+msgid "No surveys are available right now — please try again later."
+msgstr ""
+
+#: templates/index.html:1148
+msgid "No surveys available right now — here are a few quick questions instead."
+msgstr ""
+
+#: templates/index.html:1149
+msgid "Checking your unlock…"
+msgstr ""
+
+#: templates/index.html:1150
+msgid ""
+"Still waiting on the survey provider. Your credit is safe — close this "
+"and retry the export in a bit, it will pick up automatically once the "
+"survey lands."
+msgstr ""
+
+#: templates/index.html:1151
+msgid "Unlocked — starting your export…"
 msgstr ""
 
