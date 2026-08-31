@@ -22,6 +22,14 @@
 
   --font-head: 'Oxanium', 'Segoe UI', system-ui, sans-serif;
   --font-body: 'Exo 2', 'Segoe UI', system-ui, sans-serif;
+
+  /* Brand palette (sampled from reference icon + wordmark lockup) */
+  --color-bg:                 #0B161F;
+  --color-bg-black:           #000000;
+  --color-brand-green:        #3CAC53;
+  --color-brand-green-dark:   #28763A;
+  --color-accent-green:       #39B577;
+  --color-accent-green-dark:  #1D5D3D;
 }
 
 /* ── Skip link (accessibility Fix 4) ───────────────────────── */
