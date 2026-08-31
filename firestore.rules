@@ -49,13 +49,14 @@ service cloud.firestore {
     // itself, and because rule matches are OR'd that permissive block would
     // silently re-open the server-owned-field hole closed above.
     //
-    // ad_jtis and survey_completions are carved out for the same reason and
-    // must be excluded *here* rather than only re-matched below: rule matches
-    // are OR'd, so a blanket write on the parent would outvote a stricter rule
-    // on the child.
+    // ad_jtis, survey_completions, quota (the tourney_export doc lives at
+    // users/{uid}/quota/tourney_export) and gate_events are carved out for the
+    // same reason and must be excluded *here* rather than only re-matched
+    // below: rule matches are OR'd, so a blanket write on the parent would
+    // outvote a stricter rule on the child.
     match /users/{uid}/{sub}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid
-                         && !(sub in ['ad_jtis', 'survey_completions']);
+                         && !(sub in ['ad_jtis', 'survey_completions', 'quota', 'gate_events']);
     }
 
     // Spent export unlocks. The whole point of the jti record is that it exists
@@ -70,6 +71,25 @@ service cloud.firestore {
     // makes a redelivered postback pay once. Client-deletable would mean one
     // survey could be cashed in repeatedly.
     match /users/{uid}/survey_completions/{completionId} {
+      allow read:  if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Tourney-export lifetime-free + weekly counter (a single doc, id
+    // 'tourney_export', inside the quota subcollection — distinct from the
+    // quota map field on users/{uid} above). A counter the browser can zero
+    // is not a counter, same rationale as the daily quota map.
+    match /users/{uid}/quota/{quotaDoc} {
+      allow read:  if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Gate-event history, shared by tourney-export/hand-export/import gate
+    // checks (incl. the "watch to unlock" stub — gate_provider: 'stub').
+    // Append-only and server-written; a client-writable log would be
+    // worthless for the audit/reporting it exists for, and would let a gate
+    // be cashed in repeatedly.
+    match /users/{uid}/gate_events/{eventId} {
       allow read:  if request.auth != null && request.auth.uid == uid;
       allow write: if false;
     }

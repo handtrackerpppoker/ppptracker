@@ -110,6 +110,9 @@ class _Txn:
     def update(self, ref, data):
         ref.update(data)
 
+    def create(self, ref, data):
+        ref.create(data)
+
 
 class FakeDB:
     def __init__(self):
@@ -211,7 +214,7 @@ def _reset_user(uid, is_pro=False):
     DB.put(('users', uid), {'is_pro': is_pro})
     for path in [p for p, _ in DB.items()
                  if len(p) > 2 and p[0] == 'users' and p[1] == uid
-                 and p[2] in ('ad_jtis', 'survey_completions')]:
+                 and p[2] in ('ad_jtis', 'survey_completions', 'quota', 'gate_events')]:
         DB._d.pop(path, None)
 
 
@@ -297,6 +300,115 @@ def test_credits():
         left  = A._credits(FREE_UID)
     check('consume spends one credit', spent is True and left['tourney'] == 0)
     check('consume at zero is a no-op', again is False)
+
+
+# ── 2b. Tourney-export: lifetime-free + weekly counter ──────────────────────
+
+def test_tourney_export_state():
+    print('tourney export state')
+    _reset_user(FREE_UID)
+    DB._d.pop(('users', FREE_UID, 'quota', 'tourney_export'), None)
+
+    with A.app.test_request_context('/'):
+        this_week = A._current_iso_week()
+        state = A._tourney_export_state(FREE_UID)
+    check('brand-new user has not used the lifetime freebie',
+          state['lifetime_free_used'] is False, str(state))
+    check('brand-new user has zero weekly usage', state['current_week_used'] == 0, str(state))
+    check('current_week_iso is resolved server-side to this ISO week',
+          state['current_week_iso'] == this_week, str(state))
+    check('reading state performs no write',
+          DB.get(('users', FREE_UID, 'quota', 'tourney_export')) is None)
+
+    with A.app.test_request_context('/'):
+        new_state = A._bump_tourney_export_usage(FREE_UID)
+    check('the first bump spends the lifetime freebie',
+          new_state['lifetime_free_used'] is True, str(new_state))
+    check('spending the freebie does not count against the weekly cap',
+          new_state['current_week_used'] == 0, str(new_state))
+
+    with A.app.test_request_context('/'):
+        state = A._tourney_export_state(FREE_UID)
+    check('lifetime-already-used is reflected on the next read',
+          state['lifetime_free_used'] is True, str(state))
+    check('lifetime_free_used_at was stamped', state['lifetime_free_used_at'] is not None)
+
+    with A.app.test_request_context('/'):
+        second = A._bump_tourney_export_usage(FREE_UID)
+    check('the second bump (freebie spent) increments this week\'s counter',
+          second['current_week_used'] == 1, str(second))
+    check('lifetime_free_used_at is preserved, not re-stamped',
+          second['lifetime_free_used_at'] == new_state['lifetime_free_used_at'])
+
+    # Week rollover: a stored week that isn't the current one must read (and
+    # then bump) as if the counter were freshly zero, without any nightly job.
+    stale = {'lifetime_free_used': True, 'lifetime_free_used_at': 't0',
+             'current_week_iso': '2000-W01', 'current_week_used': 5,
+             'last_reset_at': 't0'}
+    DB.put(('users', FREE_UID, 'quota', 'tourney_export'), stale)
+    with A.app.test_request_context('/'):
+        this_week = A._current_iso_week()
+        rolled = A._tourney_export_state(FREE_UID)
+    check('a stale ISO week reads current_week_used as 0',
+          rolled['current_week_used'] == 0, str(rolled))
+    check('the lifetime flag survives a week rollover',
+          rolled['lifetime_free_used'] is True, str(rolled))
+    check('current_week_iso reported is the current week, not the stale one',
+          rolled['current_week_iso'] == this_week, str(rolled))
+
+    with A.app.test_request_context('/'):
+        bumped = A._bump_tourney_export_usage(FREE_UID)
+    check('a bump after rollover starts this week at 1, not 6',
+          bumped['current_week_used'] == 1, str(bumped))
+    check('and rewrites the stored week to the current one',
+          bumped['current_week_iso'] == this_week, str(bumped))
+
+    # A user who has never been written to Firestore at all must not 500.
+    DB._d.pop(('users', 'uid-fresh-tourney'), None)
+    with A.app.test_request_context('/'):
+        fresh_state = A._tourney_export_state('uid-fresh-tourney')
+        fresh_bump = A._bump_tourney_export_usage('uid-fresh-tourney')
+    check('a never-seen uid reads a clean default state',
+          fresh_state['lifetime_free_used'] is False, str(fresh_state))
+    check('and can still spend its lifetime freebie',
+          fresh_bump is not None and fresh_bump['lifetime_free_used'] is True,
+          str(fresh_bump))
+
+
+# ── 2c. Gate-event history ───────────────────────────────────────────────────
+
+def test_gate_events():
+    print('gate events')
+    _reset_user(FREE_UID)
+    for path in [p for p, _ in DB.items()
+                 if len(p) > 2 and p[0] == 'users' and p[1] == FREE_UID and p[2] == 'gate_events']:
+        DB._d.pop(path, None)
+
+    with A.app.test_request_context('/'):
+        A._record_gate_event(FREE_UID, 'tourney_export', True, provider='stub',
+                             completion_id='cmp-1')
+        A._record_gate_event(FREE_UID, 'hand_export', False)
+        A._record_gate_event(FREE_UID, 'import', True, provider='cpx', completion_id='trans-9')
+
+    events = [data for path, data in DB.items()
+              if len(path) == 4 and path[0] == 'users' and path[1] == FREE_UID
+              and path[2] == 'gate_events']
+    check('three events were recorded', len(events) == 3, str(events))
+
+    by_kind = {e['kind']: e for e in events}
+    tourney_evt = by_kind['tourney_export']
+    check('a gated tourney_export event records its provider and completion id',
+          tourney_evt['gated'] is True and tourney_evt['gate_provider'] == 'stub'
+          and tourney_evt['gate_completion_id'] == 'cmp-1',
+          str(tourney_evt))
+    check('the event carries a written timestamp',
+          tourney_evt.get('at') == _gcf.SERVER_TIMESTAMP, str(tourney_evt.get('at')))
+    check('an ungated event records gated=False with no provider',
+          by_kind['hand_export']['gated'] is False
+          and by_kind['hand_export']['gate_provider'] is None,
+          str(by_kind.get('hand_export')))
+    check('gate_provider is a free-form string, not a fixed set — cpx accepted',
+          by_kind['import']['gate_provider'] == 'cpx', str(by_kind.get('import')))
 
 
 # ── 3. Ad tokens ─────────────────────────────────────────────────────────────
@@ -391,20 +503,84 @@ def test_export_gates():
           res.status_code == 402 and body.get('error') == 'quota_exceeded'
           and body.get('upgrade') is True, f'{res.status_code} {body}')
 
-    # Per-tournament exports: always survey-gated, one a day.
+    with A.app.test_request_context('/'):
+        hand_events = [d for _p, d in DB.items()
+                      if len(_p) == 4 and _p[0] == 'users' and _p[1] == FREE_UID
+                      and _p[2] == 'gate_events' and d.get('kind') == 'hand_export']
+    check('every successful hand export left a gate_events row (AC4)',
+          len(hand_events) == 5, str(len(hand_events)))
+    check('the free ones are recorded ungated',
+          sum(1 for e in hand_events if e['gated'] is False) == 2, str(hand_events))
+    check('the credit/token-unlocked ones are recorded gated',
+          sum(1 for e in hand_events if e['gated'] is True) == 3, str(hand_events))
+
+    # Per-tournament exports: 1 free for the lifetime of the account, then
+    # survey-gated (CPX, unchanged) once per ISO week — see AC3.
     res = _export_tourney()
-    check('tournament export asks for a survey first',
+    check('the lifetime-free tourney export needs no survey',
+          res.status_code == 200, str(res.status_code))
+    with A.app.test_request_context('/'):
+        state = A._tourney_export_state(FREE_UID)
+    check('the lifetime freebie is now marked spent',
+          state['lifetime_free_used'] is True, str(state))
+
+    res = _export_tourney()
+    check('the next tourney export (lifetime spent) asks for a survey',
           res.status_code == 402 and res.get_json().get('error') == 'survey_required',
           str(res.status_code))
     with A.app.test_request_context('/'):
         A._grant_credit(FREE_UID, 'tourney')
     check('tournament export succeeds on a credit', _export_tourney().status_code == 200)
     with A.app.test_request_context('/'):
+        weekly_state = A._tourney_export_state(FREE_UID)
+    check('the weekly counter advanced by exactly one',
+          weekly_state['current_week_used'] == 1, str(weekly_state))
+
+    with A.app.test_request_context('/'):
         A._grant_credit(FREE_UID, 'tourney')
     res = _export_tourney()
-    check('second tournament export is capped for the day',
+    check('a second gated tourney export the same week is over the weekly cap, credit or not',
           res.status_code == 402 and res.get_json().get('error') == 'quota_exceeded',
           str(res.status_code))
+    with A.app.test_request_context('/'):
+        # The credit granted just above was never spent — quota_exceeded blocks
+        # before the credit check runs at all — so it is still banked. Spend it
+        # back down to zero so the rollover check below starts from a clean
+        # "no unlock banked" state instead of silently riding on this leftover.
+        A._consume_credit(FREE_UID, 'tourney')
+        check('no tourney credit is banked going into the rollover check',
+              A._credits(FREE_UID)['tourney'] == 0)
+
+    # Week rollover: a stored current_week_iso from a prior week must not keep
+    # counting against this week's limit (mirrors test_tourney_export_state's
+    # rollover, but exercised through the actual route this time).
+    DB.put(('users', FREE_UID, 'quota', 'tourney_export'),
+           dict(DB.get(('users', FREE_UID, 'quota', 'tourney_export')) or {},
+                current_week_iso='2000-W01', current_week_used=99))
+    res = _export_tourney()
+    check('a stale current_week_iso reads as this week with zero used, so a '
+          'survey is asked for again rather than staying capped',
+          res.status_code == 402 and res.get_json().get('error') == 'survey_required',
+          str(res.status_code))
+    with A.app.test_request_context('/'):
+        A._grant_credit(FREE_UID, 'tourney')
+    check('the export succeeds once unlocked in the new week',
+          _export_tourney().status_code == 200)
+    with A.app.test_request_context('/'):
+        rolled_state = A._tourney_export_state(FREE_UID)
+    check('the weekly counter is 1 for the new week, not 100',
+          rolled_state['current_week_used'] == 1, str(rolled_state))
+
+    with A.app.test_request_context('/'):
+        tourney_events = [d for _p, d in DB.items()
+                          if len(_p) == 4 and _p[0] == 'users' and _p[1] == FREE_UID
+                          and _p[2] == 'gate_events' and d.get('kind') == 'tourney_export']
+    check('the lifetime-free grant and both credit-unlocked grants left a row',
+          len(tourney_events) == 3, str(tourney_events))
+    check('the lifetime grant is ungated',
+          any(e['gated'] is False for e in tourney_events), str(tourney_events))
+    check('the credit-unlocked grant is gated',
+          any(e['gated'] is True for e in tourney_events), str(tourney_events))
 
     res = CLIENT.post('/api/export/pokerstars', json={'tourney_ids': ['trecent']})
     body = res.get_json()
@@ -439,18 +615,44 @@ def test_export_ads_config():
     DB.put(('config', 'admins'), {'uids': ['uid-admin']})
 
     DEFAULT_CFG = {
-        'hand_hard_limit':    A.FREE_HAND_EXPORTS_PER_DAY,
-        'hand_soft_limit':    A.FREE_HAND_EXPORTS_PER_DAY - A.FREE_HAND_EXPORTS_UNGATED,
-        'tourney_hard_limit': A.FREE_TOURNEY_EXPORTS_DAY,
-        'tourney_soft_limit': A.FREE_TOURNEY_EXPORTS_DAY,
+        'hand_hard_limit':       A.FREE_HAND_EXPORTS_PER_DAY,
+        'hand_soft_limit':       A.FREE_HAND_EXPORTS_PER_DAY - A.FREE_HAND_EXPORTS_UNGATED,
+        'tourney_hard_limit':    A.FREE_TOURNEY_EXPORTS_DAY,
+        'tourney_soft_limit':    A.FREE_TOURNEY_EXPORTS_DAY,
+        'tourney_lifetime_free': 1,
+        'tourney_weekly_limit':  1,
     }
+
+    # The *public* /api/export-ads-config is a reshaped, nested view (see
+    # export_ads_config_get in app.py) — distinct from the flat admin shape
+    # above. Import numbers come from _IMPORT_ADS_DEFAULTS (free=1, gated=2).
+    DEFAULT_PUBLIC_CFG = {
+        'hand_export': {
+            'hand_hard_limit': DEFAULT_CFG['hand_hard_limit'],
+            'hand_soft_limit': DEFAULT_CFG['hand_soft_limit'],
+            'gate': 'stub_modal',
+        },
+        'tourney_export': {
+            'lifetime_free': DEFAULT_CFG['tourney_lifetime_free'],
+            'weekly_limit': DEFAULT_CFG['tourney_weekly_limit'],
+            'gate': 'cpx_survey',
+        },
+        'import': {
+            'free': A._IMPORT_ADS_DEFAULTS['free'],
+            'gated': A._IMPORT_ADS_DEFAULTS['gated'],
+            'total': A._IMPORT_ADS_DEFAULTS['free'] + A._IMPORT_ADS_DEFAULTS['gated'],
+            'cadence': 'daily',
+            'gate': 'stub_modal',
+        },
+    }
+    DB._d.pop(('config', 'import_ads'), None)
 
     as_user(None)
     res = CLIENT.get('/api/export-ads-config')
     check('the public config endpoint needs no account', res.status_code == 200,
           str(res.status_code))
-    check('and reproduces the hardcoded constants by default',
-          res.get_json() == DEFAULT_CFG, str(res.get_json()))
+    check('and reproduces the nested defaults, reshaped from the admin config',
+          res.get_json() == DEFAULT_PUBLIC_CFG, str(res.get_json()))
     check('the admin config endpoint needs an account',
           CLIENT.get('/api/admin/export-ads-config').status_code == 403)
 
@@ -468,9 +670,56 @@ def test_export_ads_config():
           res.get_json() == DEFAULT_CFG, str(res.get_json()))
 
     for bad in ({'hand_hard_limit': 'five'}, {'hand_soft_limit': -1},
-                {'tourney_hard_limit': True}, {'tourney_soft_limit': 'x'}, {}):
+                {'tourney_hard_limit': True}, {'tourney_soft_limit': 'x'},
+                {'tourney_lifetime_free': -1}, {'tourney_weekly_limit': -1},
+                {'tourney_lifetime_free': 'one'}, {'tourney_weekly_limit': True},
+                {}):
         res = CLIENT.post('/api/admin/export-ads-config', json=bad)
         check(f'rejects malformed body {bad}', res.status_code == 400, str(res.status_code))
+
+    # Reshaped tourney fields: persist independently of the legacy hard/soft
+    # pair, and round-trip through both the admin GET and the public GET.
+    res = CLIENT.post('/api/admin/export-ads-config',
+                      json={'tourney_lifetime_free': 3, 'tourney_weekly_limit': 2})
+    check('posting the new tourney fields 200', res.status_code == 200, str(res.status_code))
+    check('response reflects the new tourney fields',
+          res.get_json()['tourney_lifetime_free'] == 3 and
+          res.get_json()['tourney_weekly_limit'] == 2, str(res.get_json()))
+    check('legacy tourney hard/soft untouched by the new-field post',
+          res.get_json()['tourney_hard_limit'] == DEFAULT_CFG['tourney_hard_limit'] and
+          res.get_json()['tourney_soft_limit'] == DEFAULT_CFG['tourney_soft_limit'],
+          str(res.get_json()))
+
+    as_user(None)
+    res = CLIENT.get('/api/export-ads-config')
+    check('public endpoint reflects the saved new tourney fields too, nested',
+          res.get_json()['tourney_export']['lifetime_free'] == 3 and
+          res.get_json()['tourney_export']['weekly_limit'] == 2, str(res.get_json()))
+    check('reshaped tourney block keeps its survey gate label',
+          res.get_json()['tourney_export']['gate'] == 'cpx_survey', str(res.get_json()))
+    check('hand-export block keeps its shape but reports the stub-modal gate',
+          res.get_json()['hand_export'] == {
+              'hand_hard_limit': DEFAULT_CFG['hand_hard_limit'],
+              'hand_soft_limit': DEFAULT_CFG['hand_soft_limit'],
+              'gate': 'stub_modal'}, str(res.get_json()))
+    check('import block is present with free/gated/total/cadence/gate',
+          res.get_json()['import'] == DEFAULT_PUBLIC_CFG['import'], str(res.get_json()))
+
+    # Admin-configured import numbers flow through to the public import block too.
+    as_user('uid-admin')
+    res = CLIENT.post('/api/admin/import-ads-config', json={'free': 4, 'gated': 6})
+    check('posting new import numbers 200', res.status_code == 200, str(res.status_code))
+    as_user(None)
+    res = CLIENT.get('/api/export-ads-config')
+    check('public import block reflects admin-configured free/gated/total',
+          res.get_json()['import'] == {
+              'free': 4, 'gated': 6, 'total': 10,
+              'cadence': 'daily', 'gate': 'stub_modal'}, str(res.get_json()))
+    DB._d.pop(('config', 'import_ads'), None)
+
+    # Reset back to defaults for the rest of the test.
+    DB._d.pop(('config', 'export_ads'), None)
+    as_user('uid-admin')
 
     # Bullet 1: hard limit 0 blocks the kind outright — quota_exceeded, no
     # survey ever offered.
@@ -506,35 +755,89 @@ def test_export_ads_config():
     _reset_user(FREE_UID)
     as_user('uid-admin')
     res = CLIENT.post('/api/admin/export-ads-config',
-                      json={'hand_hard_limit': 5, 'hand_soft_limit': 1,
-                            'tourney_hard_limit': 2, 'tourney_soft_limit': 1})
-    check('reconfiguring hard/soft limits 200', res.status_code == 200, str(res.status_code))
+                      json={'hand_hard_limit': 5, 'hand_soft_limit': 1})
+    check('reconfiguring hand hard/soft limits 200', res.status_code == 200, str(res.status_code))
 
     as_user(FREE_UID)
     codes = [_export_hand().status_code for _ in range(4)]
     check('hand free_count=5-1=4: first 4 exports need no survey',
           codes == [200] * 4, str(codes))
     res = _export_hand()
-    check('hand export 5 needs a survey (the last soft_limit=1 slot)',
+    check('hand export 5 needs a stub-modal unlock (the last soft_limit=1 slot)',
           res.status_code == 402 and res.get_json().get('error') == 'survey_required',
           f'{res.status_code} {res.get_json()}')
 
-    res = _export_tourney()
-    check('tourney free_count=2-1=1: export 1 needs no survey',
-          res.status_code == 200, str(res.status_code))
-    res = _export_tourney()
-    check('tourney export 2 needs a survey (the last soft_limit=1 slot)',
-          res.status_code == 402 and res.get_json().get('error') == 'survey_required',
-          f'{res.status_code} {res.get_json()}')
-
-    # Tourney's default (hard=1, soft=1 -> free_count=0) must still reproduce
-    # today's "always gated" behaviour with no config doc at all.
+    # tourney_hard_limit/tourney_soft_limit are no longer read by any gate
+    # check — _tourney_export_gate is fully on the lifetime-free + weekly-limit
+    # model now (see test_tourney_export_gate for that full lifecycle). This
+    # admin-config test only needs to prove those two legacy keys still
+    # round-trip through the CRUD surface (asserted above); the new
+    # tourney_lifetime_free/tourney_weekly_limit fields are what the gate
+    # actually reads, and are exercised end-to-end below.
     DB._d.pop(('config', 'export_ads'), None)
     _reset_user(FREE_UID)
+    as_user('uid-admin')
+    res = CLIENT.post('/api/admin/export-ads-config',
+                      json={'tourney_lifetime_free': 1, 'tourney_weekly_limit': 1})
+    check('setting tourney_weekly_limit 200', res.status_code == 200, str(res.status_code))
+    as_user(FREE_UID)
     res = _export_tourney()
-    check('default tourney export still needs a survey immediately',
+    check('the lifetime freebie needs no survey even at tourney_weekly_limit=1',
+          res.status_code == 200, str(res.status_code))
+    res = _export_tourney()
+    check('once the lifetime freebie is spent, the next export needs a survey',
           res.status_code == 402 and res.get_json().get('error') == 'survey_required',
           f'{res.status_code} {res.get_json()}')
+
+
+# ── 4c. Import ads config (admin-controlled free/gated allowance) ───────────
+# Nothing enforces these numbers yet (that's a future gate-check task) — this
+# only covers the admin-config plumbing: defaults, persistence, and the
+# admin-only gate, mirroring test_export_ads_config above.
+
+def test_import_ads_config():
+    print('import ads config')
+    DB._d.pop(('config', 'import_ads'), None)
+    DB.put(('config', 'admins'), {'uids': ['uid-admin']})
+
+    DEFAULT_CFG = {'free': A._IMPORT_ADS_DEFAULTS['free'],
+                   'gated': A._IMPORT_ADS_DEFAULTS['gated']}
+    check('defaults are 1 free / 2 gated per the feature spec',
+          DEFAULT_CFG == {'free': 1, 'gated': 2}, str(DEFAULT_CFG))
+
+    check('the admin config endpoint needs an account',
+          CLIENT.get('/api/admin/import-ads-config').status_code == 403)
+
+    as_user(FREE_UID)  # not an admin
+    check('non-admin cannot read the admin config',
+          CLIENT.get('/api/admin/import-ads-config').status_code == 403)
+    check('non-admin cannot write the config',
+          CLIENT.post('/api/admin/import-ads-config',
+                      json={'free': 10}).status_code == 403)
+
+    as_user('uid-admin')
+    res = CLIENT.get('/api/admin/import-ads-config')
+    check('admin can read the config', res.status_code == 200, str(res.status_code))
+    check('default config matches the hardcoded defaults',
+          res.get_json() == DEFAULT_CFG, str(res.get_json()))
+
+    for bad in ({'free': 'one'}, {'gated': -1}, {'free': True}, {}):
+        res = CLIENT.post('/api/admin/import-ads-config', json=bad)
+        check(f'rejects malformed body {bad}', res.status_code == 400, str(res.status_code))
+
+    res = CLIENT.post('/api/admin/import-ads-config', json={'free': 2})
+    check('partial update 200', res.status_code == 200, str(res.status_code))
+    check('free updated', res.get_json()['free'] == 2, str(res.get_json()))
+    check('gated untouched by a partial update',
+          res.get_json()['gated'] == DEFAULT_CFG['gated'], str(res.get_json()))
+
+    res = CLIENT.post('/api/admin/import-ads-config', json={'free': 0, 'gated': 5})
+    check('full update 200', res.status_code == 200, str(res.status_code))
+    check('both fields persisted', res.get_json() == {'free': 0, 'gated': 5}, str(res.get_json()))
+
+    res = CLIENT.get('/api/admin/import-ads-config')
+    check('a fresh GET reflects the persisted config, not the old defaults',
+          res.get_json() == {'free': 0, 'gated': 5}, str(res.get_json()))
 
 
 # ── 5. The 7-day history window ──────────────────────────────────────────────
@@ -602,16 +905,55 @@ def test_import_quota_and_window():
     A._save_tournaments = lambda claims, records, tournaments: (
         saved.update({'tournaments': tournaments}) or (True, {'g1'}))
     _stub_pppoker(_records('trecent'))
+    DB._d.pop(('config', 'import_ads'), None)  # defaults: free=1, gated=2 (AC1)
 
     as_user(FREE_UID)
-    codes = [_import().status_code for _ in range(3)]
-    check('three imports a day are allowed', codes == [200, 200, 200], str(codes))
+    res = _import()
+    check('import 1 (the free one) needs no unlock', res.status_code == 200,
+          str(res.status_code))
+
     res = _import()
     body = res.get_json()
-    check('the fourth import is refused with an upgrade CTA',
+    check('import 2 (past the free allowance) asks for the gate-stub unlock',
+          res.status_code == 402 and body.get('error') == 'survey_required'
+          and body.get('kind') == 'import', f'{res.status_code} {body}')
+
+    with A.app.test_request_context('/'):
+        A._grant_credit(FREE_UID, 'import')
+    res = _import()
+    check('a granted import credit unlocks import 2', res.status_code == 200,
+          str(res.status_code))
+    with A.app.test_request_context('/'):
+        check('the credit was spent', A._credits(FREE_UID)['import'] == 0)
+
+    res = _import()
+    check('import 3 asks for the gate-stub unlock too (still within gated=2)',
+          res.status_code == 402 and res.get_json().get('error') == 'survey_required',
+          str(res.status_code))
+    with A.app.test_request_context('/'):
+        A._grant_credit(FREE_UID, 'import')
+    check('import 3 succeeds once unlocked', _import().status_code == 200)
+
+    res = _import()
+    body = res.get_json()
+    check('import 4 is over the hard cap (free=1 + gated=2), credit or not',
           res.status_code == 402 and body.get('error') == 'quota_exceeded'
           and body.get('kind') == 'import' and body.get('upgrade') is True,
           f'{res.status_code} {body}')
+
+    with A.app.test_request_context('/'):
+        import_events = [d for _p, d in DB.items()
+                         if len(_p) == 4 and _p[0] == 'users' and _p[1] == FREE_UID
+                         and _p[2] == 'gate_events' and d.get('kind') == 'import']
+    check('all three successful imports left a gate_events row (AC4)',
+          len(import_events) == 3, str(import_events))
+    check('only the free one is ungated',
+          sum(1 for e in import_events if e['gated'] is False) == 1, str(import_events))
+
+    as_user(None)
+    res = _import()
+    check('an anonymous import bypasses the gate entirely (nothing to count it against)',
+          res.status_code == 200, str(res.status_code))
 
     as_user(PRO_UID)
     _reset_user(PRO_UID, is_pro=True)
@@ -619,6 +961,87 @@ def test_import_quota_and_window():
     check('pro imports are uncapped', codes == [200] * 5, str(codes))
     with A.app.test_request_context('/'):
         check('pro imports are not counted', A._quota_state(PRO_UID)['imports'] == 0)
+
+
+# ── 6b. Gate-stub-modal completion → grants exactly one more action ─────────
+
+def test_stub_completion():
+    print('stub completion')
+    _reset_user(FREE_UID)
+    _put_tournament(FREE_UID, 'trecent', RECENT_TS)
+    _stub_tournament_records({'trecent': _records('trecent')})
+    saved = {}
+    A._save_tournaments = lambda claims, records, tournaments: (
+        saved.update({'x': 1}) or (True, {'g1'}))
+    _stub_pppoker(_records('trecent'))
+    DB._d.pop(('config', 'import_ads'), None)
+    DB._d.pop(('config', 'export_ads'), None)
+
+    as_user(None)
+    res = CLIENT.post('/api/gate/stub-completion',
+                      json={'kind': 'import', 'completion_id': 'c0'})
+    check('stub completion needs an account', res.status_code == 401, str(res.status_code))
+    as_user(FREE_UID)
+
+    res = CLIENT.post('/api/gate/stub-completion', json={'kind': 'nope', 'completion_id': 'c1'})
+    check('an unknown kind is rejected', res.status_code == 400, str(res.status_code))
+    res = CLIENT.post('/api/gate/stub-completion', json={'kind': 'import'})
+    check('a missing completion_id is rejected', res.status_code == 400, str(res.status_code))
+
+    # Use up the free import allowance (free=1) so the next one is gated.
+    check('the free import goes through untouched', _import().status_code == 200)
+    res = _import()
+    check('the next import is gated', res.status_code == 402
+          and res.get_json().get('error') == 'survey_required', str(res.status_code))
+
+    res = CLIENT.post('/api/gate/stub-completion',
+                      json={'kind': 'import', 'completion_id': 'stub-import-1'})
+    check('a verified stub completion is recorded', res.status_code == 200
+          and res.get_json().get('ok') is True, str(res.get_json()))
+    with A.app.test_request_context('/'):
+        check('and grants exactly one import credit', A._credits(FREE_UID)['import'] == 1)
+
+    check('the gated import now succeeds — exactly one more action unlocked',
+          _import().status_code == 200)
+    res = _import()
+    check('a further import is gated again — the credit was single-use',
+          res.status_code == 402 and res.get_json().get('error') == 'survey_required',
+          str(res.status_code))
+
+    # Replaying the same completion_id must not grant a second credit.
+    res = CLIENT.post('/api/gate/stub-completion',
+                      json={'kind': 'import', 'completion_id': 'stub-import-1'})
+    check('a replayed completion_id is reported as already_recorded',
+          res.status_code == 200 and res.get_json().get('already_recorded') is True,
+          str(res.get_json()))
+    with A.app.test_request_context('/'):
+        check('and grants no additional credit', A._credits(FREE_UID)['import'] == 0)
+
+    # Same contract for hand exports, which is the kind that actually switched
+    # away from CPX (AC2).
+    codes = [_export_hand().status_code for _ in range(2)]
+    check('the two free hand exports need no unlock', codes == [200, 200], str(codes))
+    res = _export_hand()
+    check('hand export 3 is gated', res.status_code == 402
+          and res.get_json().get('error') == 'survey_required', str(res.status_code))
+    CLIENT.post('/api/gate/stub-completion',
+               json={'kind': 'hand_export', 'completion_id': 'stub-hand-1'})
+    check('the gate-stub completion unlocks exactly hand export 3',
+          _export_hand().status_code == 200)
+    res = _export_hand()
+    check('hand export 4 is gated again', res.status_code == 402
+          and res.get_json().get('error') == 'survey_required', str(res.status_code))
+
+    # AC6: with the stub modal disabled server-side, completion is refused
+    # outright rather than silently granting a credit for an ad never shown.
+    A._GATE_STUB_MODAL_ENABLED = False
+    try:
+        res = CLIENT.post('/api/gate/stub-completion',
+                          json={'kind': 'import', 'completion_id': 'stub-import-disabled'})
+        check('a disabled stub modal refuses the completion endpoint',
+              res.status_code == 503, str(res.status_code))
+    finally:
+        A._GATE_STUB_MODAL_ENABLED = True
 
 
 def test_free_import_prunes_old_tournaments():
@@ -841,7 +1264,8 @@ def test_credit_endpoints():
           CLIENT.post('/api/ad-token', json={'kind': 'hand'}).status_code == 401)
 
     as_user(FREE_UID)
-    check('credits start empty', CLIENT.get('/api/credits').get_json() == {'hand': 0, 'tourney': 0})
+    check('credits start empty',
+          CLIENT.get('/api/credits').get_json() == {'hand': 0, 'tourney': 0, 'import': 0})
     res = CLIENT.post('/api/ad-token', json={'kind': 'hand'})
     check('no credit means no token',
           res.status_code == 402 and res.get_json().get('error') == 'survey_required',
@@ -859,9 +1283,10 @@ def test_credit_endpoints():
 
 
 def main():
-    for test in (test_quota, test_credits, test_ad_tokens, test_export_gates,
-                 test_export_ads_config,
-                 test_history_window, test_import_quota_and_window,
+    for test in (test_quota, test_credits, test_tourney_export_state, test_gate_events,
+                 test_ad_tokens, test_export_gates,
+                 test_export_ads_config, test_import_ads_config,
+                 test_history_window, test_import_quota_and_window, test_stub_completion,
                  test_free_import_prunes_old_tournaments, test_anon_import_and_claim,
                  test_cpx_postback, test_survey_config_hash, test_tally_callback,
                  test_credit_endpoints):

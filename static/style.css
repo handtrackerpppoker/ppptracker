@@ -22,6 +22,14 @@
 
   --font-head: 'Oxanium', 'Segoe UI', system-ui, sans-serif;
   --font-body: 'Exo 2', 'Segoe UI', system-ui, sans-serif;
+
+  /* Brand palette (sampled from reference icon + wordmark lockup) */
+  --color-bg:                 #0B161F;
+  --color-bg-black:           #000000;
+  --color-brand-green:        #3CAC53;
+  --color-brand-green-dark:   #28763A;
+  --color-accent-green:       #39B577;
+  --color-accent-green-dark:  #1D5D3D;
 }
 
 /* ── Skip link (accessibility Fix 4) ───────────────────────── */
@@ -69,7 +77,6 @@ body {
   letter-spacing: clamp(1px, 1vw, 4px);
   text-transform: uppercase;
   text-shadow: 0 0 24px rgba(0,230,118,.3);
-  white-space: nowrap;
 }
 
 .app-tagline {
@@ -80,6 +87,55 @@ body {
   text-transform: uppercase;
   color: var(--muted);
   margin-top: 2px;
+}
+
+/* ── Side banner (vertical, auto-rotating) ────────────────────
+   Fixed to the right edge. Only shown once the viewport is wide enough
+   to have real gutter beyond the 1400px content column — otherwise it
+   would overlap content, which the Task's AC explicitly forbids. */
+.side-banner {
+  position: fixed;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  width: 160px;
+  height: 500px;
+  background: var(--color-bg-black);
+  border: 1px solid var(--color-accent-green-dark);
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 20;
+  box-shadow: 0 4px 20px rgba(0,0,0,.4);
+}
+.side-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity .4s ease;
+}
+
+@media (max-width: 1900px) {
+  .side-banner { display: none; }
+}
+
+/* ── Mid-page banner (horizontal) ─────────────────────────────
+   Static promo slot between the free-vs-pro pitch and the results
+   section. Empty by default (see MID_BANNER_IMAGE in app.js), so it
+   never reserves height or shows a placeholder box with no content. */
+.mid-banner {
+  border: 1px solid var(--color-accent-green-dark);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--color-bg-black);
+}
+.mid-banner-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 180px;
+  object-fit: cover;
 }
 
 /* ── Feature banner ──────────────────────────────────────── */
@@ -290,6 +346,19 @@ body {
 }
 .btn-import:hover   { background: var(--green-dim); color: #000; box-shadow: 0 0 12px rgba(0,230,118,.35); }
 .btn-import:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Secondary modal-confirm button (e.g. "Apply", "Send Magic Link") —
+   was duplicated inline across modals with identical values. */
+.btn-outline-accent {
+  background: rgba(0,230,118,.12);
+  border: 1px solid rgba(0,230,118,.5);
+  color: var(--green);
+  font-family: var(--font-head);
+  font-size: .8rem;
+  letter-spacing: .5px;
+}
+.btn-outline-accent:hover:not(:disabled) { background: rgba(0,230,118,.2); }
+.btn-outline-accent:disabled { opacity: .5; cursor: not-allowed; }
 
 /* ── Validation strip ─────────────────────────────────────── */
 .val-strip  { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 2px; }
@@ -956,6 +1025,52 @@ body {
 }
 .info-badge-btn:hover { opacity: 1; color: var(--green); }
 
+/* ── Header row (auth + connection status left, settings right) ─────
+   flex-wrap on both clusters means a narrow viewport wraps controls onto
+   their own line instead of shrinking/overlapping them. */
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: .5rem;
+}
+.header-row-left,
+.header-row-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Simple network connectivity indicator, driven by navigator.onLine
+   (see _initConnStatus in app.js). */
+.conn-status {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font-family: var(--font-head);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .3px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent-green);
+  box-shadow: 0 0 6px var(--color-accent-green);
+  flex-shrink: 0;
+}
+.conn-status.conn-offline { color: var(--red); }
+.conn-status.conn-offline .conn-dot {
+  background: var(--red);
+  box-shadow: 0 0 6px var(--red);
+}
+
 /* ── Auth bar ─────────────────────────────────────────────── */
 .auth-bar {
   display: flex;
@@ -1230,20 +1345,27 @@ button.auth-chip { background: none; }
   .btn-import { width: 100%; }
 }
 
-/* ── Info modals ──────────────────────────────────────────── */
-.info-modal-content {
+/* ── Shared modal chrome ───────────────────────────────────────
+   One visual pattern for every modal in the app (colors, typography,
+   spacing) — originally built for the 5 read-only "info" modals, now
+   applied everywhere so functional modals (export warning, pro upgrade,
+   date range, survey, gate stub, auth) share the same look instead of
+   each repeating background/border/color inline. Per-modal specifics
+   (dialog max-width, modal-fullscreen-sm-down, footer button layout)
+   stay as situational Bootstrap utility classes on top of this. */
+.app-modal-content {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
   color: var(--text);
 }
-.info-modal-header {
+.app-modal-header {
   background: var(--panel-alt);
   border-bottom: 1px solid var(--border);
   border-radius: 12px 12px 0 0;
   padding: 14px 20px;
 }
-.info-modal-header .modal-title {
+.app-modal-header .modal-title {
   font-family: var(--font-head);
   font-size: 1rem;
   font-weight: 700;
@@ -1251,22 +1373,30 @@ button.auth-chip { background: none; }
   text-transform: uppercase;
   color: var(--text);
 }
-.info-modal-body {
+.app-modal-body {
   padding: 20px 22px;
   font-family: var(--font-body);
   font-size: .9rem;
   line-height: 1.65;
   color: var(--text);
 }
-.info-modal-body p { margin-bottom: 12px; }
-.info-modal-body p:last-child { margin-bottom: 0; }
-.info-modal-body ul, .info-modal-body ol {
+.app-modal-footer {
+  border-top: 1px solid var(--border);
+  padding: .75rem 1rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.app-modal-body p { margin-bottom: 12px; }
+.app-modal-body p:last-child { margin-bottom: 0; }
+.app-modal-body ul, .app-modal-body ol {
   padding-left: 20px;
   margin-bottom: 12px;
 }
-.info-modal-body li { margin-bottom: 7px; }
-.info-modal-body strong { color: #e8f5e8; }
-.info-modal-body code {
+.app-modal-body li { margin-bottom: 7px; }
+.app-modal-body strong { color: #e8f5e8; }
+.app-modal-body code {
   background: rgba(0,230,118,.08);
   border: 1px solid rgba(0,230,118,.15);
   border-radius: 4px;
@@ -1436,20 +1566,42 @@ button.auth-chip { background: none; }
 }
 
 
-/* ── Gamification ───────────────────────────────────────────── */
-.gam-banner {
-  display: flex;
+/* ── Header row (title flanked by the two rewards blocks) ────
+   gam-stats (points/streak/rank) sits left of the title, gam-side
+   (badges/next) sits right — each is its own visually distinct panel,
+   toggled independently by _loadGamification() so the title stays put
+   regardless of gamification load state. */
+.header-flanked {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px 18px;
+  gap: 12px;
   max-width: 1400px;
-  margin: 0 auto .75rem;
-  padding: .6rem 1rem;
+  margin: 0 auto 1rem;
+}
+.header-flanked .gam-stats,
+.header-flanked .gam-side {
   background: rgba(0,230,118,.07);
   border: 1px solid rgba(0,230,118,.22);
   border-radius: 10px;
+  padding: .6rem 1rem;
 }
+.header-flanked .gam-stats { grid-column: 1; justify-self: start; }
+.header-title-block { grid-column: 2; }
+.header-flanked .gam-side { grid-column: 3; justify-self: end; }
+
+@media (max-width: 991.98px) {
+  .header-flanked {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+  .header-flanked .gam-stats { grid-column: 1; grid-row: 2; justify-self: center; margin-top: .5rem; }
+  .header-title-block { grid-row: 1; }
+  .header-flanked .gam-side { grid-column: 1; grid-row: 3; justify-self: center; justify-content: center; margin-top: .5rem; }
+}
+
+/* ── Gamification ───────────────────────────────────────────── */
 .gam-stats { display: flex; align-items: center; gap: 1.5rem; }
 .gam-stat  { display: flex; flex-direction: column; line-height: 1.15; }
 .gam-stat-value {
@@ -1548,9 +1700,7 @@ button.auth-chip { background: none; }
 }
 
 @media (max-width: 575.98px) {
-  .gam-banner { justify-content: center; }
   .gam-stats  { gap: 1.1rem; }
-  .gam-side   { justify-content: center; }
   .gam-next   { display: none; }
 }
 
