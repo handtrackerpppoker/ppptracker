@@ -348,6 +348,19 @@ body {
 .btn-import:hover   { background: var(--green-dim); color: #000; box-shadow: 0 0 12px rgba(0,230,118,.35); }
 .btn-import:disabled { opacity: .5; cursor: not-allowed; }
 
+/* Secondary modal-confirm button (e.g. "Apply", "Send Magic Link") —
+   was duplicated inline across modals with identical values. */
+.btn-outline-accent {
+  background: rgba(0,230,118,.12);
+  border: 1px solid rgba(0,230,118,.5);
+  color: var(--green);
+  font-family: var(--font-head);
+  font-size: .8rem;
+  letter-spacing: .5px;
+}
+.btn-outline-accent:hover:not(:disabled) { background: rgba(0,230,118,.2); }
+.btn-outline-accent:disabled { opacity: .5; cursor: not-allowed; }
+
 /* ── Validation strip ─────────────────────────────────────── */
 .val-strip  { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 2px; }
 .val-pill   {
@@ -1333,20 +1346,27 @@ button.auth-chip { background: none; }
   .btn-import { width: 100%; }
 }
 
-/* ── Info modals ──────────────────────────────────────────── */
-.info-modal-content {
+/* ── Shared modal chrome ───────────────────────────────────────
+   One visual pattern for every modal in the app (colors, typography,
+   spacing) — originally built for the 5 read-only "info" modals, now
+   applied everywhere so functional modals (export warning, pro upgrade,
+   date range, survey, gate stub, auth) share the same look instead of
+   each repeating background/border/color inline. Per-modal specifics
+   (dialog max-width, modal-fullscreen-sm-down, footer button layout)
+   stay as situational Bootstrap utility classes on top of this. */
+.app-modal-content {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
   color: var(--text);
 }
-.info-modal-header {
+.app-modal-header {
   background: var(--panel-alt);
   border-bottom: 1px solid var(--border);
   border-radius: 12px 12px 0 0;
   padding: 14px 20px;
 }
-.info-modal-header .modal-title {
+.app-modal-header .modal-title {
   font-family: var(--font-head);
   font-size: 1rem;
   font-weight: 700;
@@ -1354,22 +1374,30 @@ button.auth-chip { background: none; }
   text-transform: uppercase;
   color: var(--text);
 }
-.info-modal-body {
+.app-modal-body {
   padding: 20px 22px;
   font-family: var(--font-body);
   font-size: .9rem;
   line-height: 1.65;
   color: var(--text);
 }
-.info-modal-body p { margin-bottom: 12px; }
-.info-modal-body p:last-child { margin-bottom: 0; }
-.info-modal-body ul, .info-modal-body ol {
+.app-modal-footer {
+  border-top: 1px solid var(--border);
+  padding: .75rem 1rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.app-modal-body p { margin-bottom: 12px; }
+.app-modal-body p:last-child { margin-bottom: 0; }
+.app-modal-body ul, .app-modal-body ol {
   padding-left: 20px;
   margin-bottom: 12px;
 }
-.info-modal-body li { margin-bottom: 7px; }
-.info-modal-body strong { color: #e8f5e8; }
-.info-modal-body code {
+.app-modal-body li { margin-bottom: 7px; }
+.app-modal-body strong { color: #e8f5e8; }
+.app-modal-body code {
   background: rgba(0,230,118,.08);
   border: 1px solid rgba(0,230,118,.15);
   border-radius: 4px;
