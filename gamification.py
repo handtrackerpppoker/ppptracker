@@ -80,29 +80,29 @@ ALLOWED_TIMEZONES = (
 
 BADGES = {
     # Lifetime volume
-    '72o':   {'name': '7-2 Offsuit',     'title': 'The Grind Begins'},
-    '44':    {'name': 'Pocket Fours',    'title': 'The Sailboats'},
-    'JJ':    {'name': 'Pocket Jacks',    'title': 'Mid-Tier Reg'},
-    'QQ':    {'name': 'Pocket Queens',   'title': 'The Ladies'},
-    'KK':    {'name': 'Pocket Kings',    'title': 'Volume Crusher'},
-    'AK':    {'name': 'A-K',             'title': 'Big Slick'},
-    'AA':    {'name': 'Pocket Aces',     'title': 'The Legend'},
-    'AA88':  {'name': 'A-A-8-8',         'title': "Dead Man's Hand"},
+    '72o':   {'name': '7-2 Offsuit',     'title': 'The Grind Begins',  'icon': '🌱', 'hint': 'Import 1,000 hands, lifetime.'},
+    '44':    {'name': 'Pocket Fours',    'title': 'The Sailboats',     'icon': '⛵', 'hint': 'Import 10,000 hands, lifetime.'},
+    'JJ':    {'name': 'Pocket Jacks',    'title': 'Mid-Tier Reg',      'icon': '🎯', 'hint': 'Import 25,000 hands, lifetime.'},
+    'QQ':    {'name': 'Pocket Queens',   'title': 'The Ladies',        'icon': '💃', 'hint': 'Import 50,000 hands, lifetime.'},
+    'KK':    {'name': 'Pocket Kings',    'title': 'Volume Crusher',    'icon': '💪', 'hint': 'Import 100,000 hands, lifetime.'},
+    'AK':    {'name': 'A-K',             'title': 'Big Slick',         'icon': '🎩', 'hint': 'Import 250,000 hands, lifetime.'},
+    'AA':    {'name': 'Pocket Aces',     'title': 'The Legend',        'icon': '🏆', 'hint': 'Import 500,000 hands, lifetime.'},
+    'AA88':  {'name': 'A-A-8-8',         'title': "Dead Man's Hand",   'icon': '💀', 'hint': 'Import 1,000,000 hands, lifetime.'},
     # Behavioural
-    'K9':    {'name': 'K-9',             'title': 'Break Master'},
-    'A2345': {'name': 'A-2-3-4-5',       'title': 'Rapid Fire'},
-    'STEEL': {'name': 'Steel Wheel',     'title': 'Vampire Grinder'},
-    'T2':    {'name': '10-2',            'title': 'The Comeback'},
-    'ROYAL': {'name': 'Royal Flush',     'title': 'Flawless Week'},
-    'Q7':    {'name': 'Q-7',             'title': 'The Machine'},
-    'J4':    {'name': 'J-4',             'title': 'The Wildcard'},
-    '99':    {'name': '9-9',             'title': 'The Closer'},
-    '83':    {'name': '8-3',             'title': 'The Ghost'},
-    '23o':   {'name': '2-3 Offsuit',     'title': 'The Downswing'},
+    'K9':    {'name': 'K-9',             'title': 'Break Master',      'icon': '☕', 'hint': 'Import during the tournament break, 5 days running.'},
+    'A2345': {'name': 'A-2-3-4-5',       'title': 'Rapid Fire',        'icon': '⚡', 'hint': 'Import 4 times inside one rolling hour.'},
+    'STEEL': {'name': 'Steel Wheel',     'title': 'Vampire Grinder',   'icon': '🧛', 'hint': 'Import between 2am and 5am.'},
+    'T2':    {'name': '10-2',            'title': 'The Comeback',      'icon': '🔄', 'hint': 'Import 50% more hands than last week.'},
+    'ROYAL': {'name': 'Royal Flush',     'title': 'Flawless Week',     'icon': '🌟', 'hint': 'Keep a 7-day import streak alive.'},
+    'Q7':    {'name': 'Q-7',             'title': 'The Machine',       'icon': '🤖', 'hint': 'Import 10 times inside 24 hours.'},
+    'J4':    {'name': 'J-4',             'title': 'The Wildcard',      'icon': '🃏', 'hint': 'Import exactly 15 hands in one batch.'},
+    '99':    {'name': '9-9',             'title': 'The Closer',        'icon': '🔒', 'hint': 'Import in the last 5 minutes before the daily reset.'},
+    '83':    {'name': '8-3',             'title': 'The Ghost',         'icon': '👻', 'hint': 'Return after exactly 7 silent days.'},
+    '23o':   {'name': '2-3 Offsuit',     'title': 'The Downswing',     'icon': '📉', 'hint': 'Break a 10-day-or-longer streak.'},
     # Weekly podium
-    'SF':    {'name': 'Straight Flush',  'title': 'Weekly Champion'},
-    'QUADS': {'name': 'Four of a Kind',  'title': 'Weekly Runner-Up'},
-    'BOAT':  {'name': 'Full House',      'title': 'Weekly Third'},
+    'SF':    {'name': 'Straight Flush',  'title': 'Weekly Champion',   'icon': '🥇', 'hint': 'Finish #1 on the weekly leaderboard.'},
+    'QUADS': {'name': 'Four of a Kind',  'title': 'Weekly Runner-Up',  'icon': '🥈', 'hint': 'Finish #2 on the weekly leaderboard.'},
+    'BOAT':  {'name': 'Full House',      'title': 'Weekly Third',      'icon': '🥉', 'hint': 'Finish #3 on the weekly leaderboard.'},
 }
 
 VOLUME_BADGES = (
@@ -432,6 +432,31 @@ def next_volume_badge(lifetime_hands):
     return None
 
 
+_VOLUME_CODES = frozenset(code for _, code in VOLUME_BADGES)
+_PODIUM_CODES = frozenset(code for _, code in PODIUM.values())
+
+
+def badge_catalog(badge_codes, badges_earned):
+    """Every badge in the registry, earned or not — feeds the header's "badge journey" popup
+    so players can see what they're chasing, not just what they already have."""
+    earned_ts = {b['code']: b['ts'] for b in badges_earned}
+    catalog = []
+    for code, meta in BADGES.items():
+        category = ('volume' if code in _VOLUME_CODES else
+                    'podium' if code in _PODIUM_CODES else 'behavioural')
+        catalog.append({
+            'code':     code,
+            'name':     meta['name'],
+            'title':    meta['title'],
+            'icon':     meta['icon'],
+            'hint':     meta['hint'],
+            'category': category,
+            'earned':   code in badge_codes,
+            'ts':       earned_ts.get(code),
+        })
+    return catalog
+
+
 # ── Firestore shell ──────────────────────────────────────────────────────────
 
 _TZ_CACHE = {'ts': 0, 'name': None}
@@ -676,7 +701,7 @@ def snapshot(db, uid, now_ts=None, tz=None):
             'points_total': 0, 'week_points': 0, 'streak_days': 0, 'streak_best': 0,
             'lifetime_hands': 0, 'rank': None, 'badges': [],
             'next_badge': next_volume_badge(0), 'timezone': resolve_tz_name(db),
-            'min_hands': MIN_HANDS,
+            'min_hands': MIN_HANDS, 'badge_catalog': badge_catalog([], []),
         }
 
     st        = _hydrate(snap.to_dict())
@@ -702,6 +727,7 @@ def snapshot(db, uid, now_ts=None, tz=None):
         'next_badge':     next_volume_badge(st['lifetime_hands']),
         'timezone':       resolve_tz_name(db),
         'min_hands':      MIN_HANDS,
+        'badge_catalog':  badge_catalog(st['badge_codes'], st['badges']),
     }
 
 

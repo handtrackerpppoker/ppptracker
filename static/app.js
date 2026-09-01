@@ -912,14 +912,15 @@ function _loadGamification() {
       document.getElementById('gam-rank').textContent =
         g.rank ? `#${g.rank}` : '—';
 
+      const catalog = g.badge_catalog || [];
       // Newest badges first — the most recent unlock is the interesting one.
-      const badges = (g.badges || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-      const shown  = badges.slice(0, 4);
+      const earned = catalog.filter(b => b.earned).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      const shown  = earned.slice(0, 4);
       let html = shown.map(b =>
-        `<span class="gam-badge" title="${_esc(b.name)} — ${_esc(b.title)}">${_esc(b.title)}</span>`
+        `<span class="gam-badge" title="${_esc(b.name)} — ${_esc(b.title)}">${b.icon} ${_esc(b.title)}</span>`
       ).join('');
-      if (badges.length > shown.length) {
-        html += `<span class="gam-badge gam-badge-more">+${badges.length - shown.length}</span>`;
+      if (earned.length > shown.length) {
+        html += `<span class="gam-badge gam-badge-more">+${earned.length - shown.length}</span>`;
       }
       document.getElementById('gam-badges').innerHTML = html;
 
@@ -928,10 +929,39 @@ function _loadGamification() {
         ? `<strong>${_fmtNum(next.remaining)}</strong> hands to ${_esc(next.title)}`
         : '';
 
+      _renderBadgeJourney(catalog);
+
       left.classList.remove('d-none');
       right.classList.remove('d-none');
     })
     .catch(() => { /* the rewards blocks are decoration — never surface a failure here */ });
+}
+
+/** Populate the "Badge Journey" popup — every badge in the registry, earned or locked. */
+function _renderBadgeJourney(catalog) {
+  const grid = document.getElementById('badge-journey-grid');
+  if (!grid || !catalog.length) return;
+  const CATEGORY_LABEL = { volume: 'Lifetime Volume', behavioural: 'Play Style', podium: 'Weekly Podium' };
+  let lastCategory = null;
+  let html = '';
+  for (const b of catalog) {
+    if (b.category !== lastCategory) {
+      if (lastCategory !== null) html += '</div>';
+      html += `<div class="badge-journey-section-label">${_esc(CATEGORY_LABEL[b.category] || b.category)}</div><div class="badge-journey-section">`;
+      lastCategory = b.category;
+    }
+    const cls  = b.earned ? 'badge-journey-item earned' : 'badge-journey-item locked';
+    const hint = b.earned
+      ? `${_esc(b.name)} — ${_esc(b.title)}`
+      : `${_esc(b.name)} — ${_esc(b.title)}: ${_esc(b.hint)}`;
+    html += `
+      <div class="${cls}" title="${hint}">
+        <span class="badge-journey-icon">${b.earned ? b.icon : '🔒'}</span>
+        <span class="badge-journey-title">${_esc(b.title)}</span>
+      </div>`;
+  }
+  html += '</div>';
+  grid.innerHTML = html;
 }
 
 /** Floating summary of what an import just earned. */

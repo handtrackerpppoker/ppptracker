@@ -1566,23 +1566,28 @@ button.auth-chip { background: none; }
 }
 
 
-/* ── Header row (title flanked by the two rewards blocks) ────
-   gam-stats (points/streak/rank) sits left of the title, gam-side
-   (badges/next) sits right — each is its own visually distinct panel,
-   toggled independently by _loadGamification() so the title stays put
-   regardless of gamification load state. */
+/* ── Header row (centered logo, rewards cards stacked below it) ──
+   gam-stats (points/streak/rank) and gam-side (badges/next) sit side by
+   side in an equal-width row below the title — each is its own visually
+   distinct panel, toggled independently by _loadGamification() so the
+   title stays put regardless of gamification load state. */
 .header-flanked {
-  display: grid;
-  /* Both flanking tracks share the same minmax() floor so they always end up
-     the same width as each other — plain `1fr auto 1fr` lets each track's
-     own min-content size (gam-stats needs ~225px, gam-side needs less)
-     override the equal 1fr split, which pushed the title's center off the
-     true page center by ~40px on desktop. */
-  grid-template-columns: minmax(225px, 1fr) auto minmax(225px, 1fr);
+  display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 12px;
   max-width: 1400px;
   margin: 0 auto 1rem;
+  text-align: center;
+}
+.header-cards-row {
+  display: grid;
+  /* Equal 1fr columns, not auto-sized to content — the two cards must stay
+     the same width as each other regardless of how much either one holds. */
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 620px;
 }
 .header-flanked .gam-stats,
 .header-flanked .gam-side {
@@ -1590,24 +1595,17 @@ button.auth-chip { background: none; }
   border: 1px solid rgba(0,230,118,.22);
   border-radius: 10px;
   padding: .6rem 1rem;
+  justify-content: center;
 }
-.header-flanked .gam-stats { grid-column: 1; justify-self: start; }
-.header-title-block { grid-column: 2; }
-.header-flanked .gam-side { grid-column: 3; justify-self: end; }
 
-@media (max-width: 991.98px) {
-  .header-flanked {
+@media (max-width: 479.98px) {
+  .header-cards-row {
     grid-template-columns: 1fr;
-    justify-items: center;
-    text-align: center;
   }
-  .header-flanked .gam-stats { grid-column: 1; grid-row: 2; justify-self: center; margin-top: .5rem; }
-  .header-title-block { grid-column: 1; grid-row: 1; }
-  .header-flanked .gam-side { grid-column: 1; grid-row: 3; justify-self: center; justify-content: center; margin-top: .5rem; }
 }
 
 /* ── Gamification ───────────────────────────────────────────── */
-.gam-stats { display: flex; align-items: center; gap: 1.5rem; }
+.gam-stats { display: flex; align-items: center; justify-content: center; gap: 1rem; }
 .gam-stat  { display: flex; flex-direction: column; line-height: 1.15; }
 .gam-stat-value {
   font-family: var(--font-head);
@@ -1626,12 +1624,77 @@ button.auth-chip { background: none; }
 }
 .gam-side {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: .75rem;
+  gap: .4rem;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: center;
 }
-.gam-badges { display: flex; flex-wrap: wrap; gap: .3rem; }
+.gam-badges { display: flex; flex-wrap: wrap; gap: .3rem; justify-content: center; }
+.gam-journey-pill {
+  font-family: var(--font-head);
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 20px;
+  padding: .14rem .6rem;
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease;
+}
+.gam-journey-pill:hover,
+.gam-journey-pill:focus-visible {
+  color: var(--green);
+  border-color: rgba(0,230,118,.4);
+}
+
+/* ── Badge journey popup ──────────────────────────────────────── */
+.badge-journey-intro { color: var(--muted); font-size: .85rem; margin-bottom: 1rem; }
+.badge-journey-section-label {
+  font-family: var(--font-head);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 1.1rem 0 .5rem;
+}
+.badge-journey-section-label:first-child { margin-top: 0; }
+.badge-journey-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: .5rem;
+}
+.badge-journey-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: .3rem;
+  padding: .6rem .4rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.02);
+  cursor: default;
+}
+.badge-journey-item.earned {
+  border-color: rgba(0,230,118,.35);
+  background: rgba(0,230,118,.08);
+}
+.badge-journey-item.locked { opacity: .5; }
+.badge-journey-icon { font-size: 1.3rem; line-height: 1; }
+.badge-journey-title {
+  font-family: var(--font-head);
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.badge-journey-item.locked .badge-journey-title { color: var(--muted); }
 .gam-badge {
   font-family: var(--font-head);
   font-size: .6rem;
@@ -1705,7 +1768,7 @@ button.auth-chip { background: none; }
 }
 
 @media (max-width: 575.98px) {
-  .gam-stats  { gap: 1.1rem; }
+  .gam-stats  { gap: .6rem; }
   .gam-next   { display: none; }
 }
 

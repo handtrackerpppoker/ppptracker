@@ -616,6 +616,31 @@ def test_snapshot():
           G.snapshot(db, 'nobody', now_ts=when, tz=ADL)['points_total'] == 0)
 
 
+def test_badge_catalog():
+    catalog = G.badge_catalog(['72o', 'K9'], [
+        {'code': '72o', 'name': '7-2 Offsuit', 'title': 'The Grind Begins', 'ts': 100},
+        {'code': 'K9', 'name': 'K-9', 'title': 'Break Master', 'ts': 200},
+    ])
+    check('catalog lists every registered badge', len(catalog) == len(G.BADGES), str(len(catalog)))
+    by_code = {b['code']: b for b in catalog}
+    check('earned badge is flagged earned', by_code['72o']['earned'] is True)
+    check('earned badge carries its unlock ts', by_code['72o']['ts'] == 100, str(by_code['72o']['ts']))
+    check('unearned badge is flagged locked', by_code['JJ']['earned'] is False)
+    check('unearned badge has no ts', by_code['JJ']['ts'] is None, str(by_code['JJ']['ts']))
+    check('every entry carries an icon and a hint',
+          all(b['icon'] and b['hint'] for b in catalog))
+    check('volume badge categorised as volume', by_code['72o']['category'] == 'volume',
+          by_code['72o']['category'])
+    check('behavioural badge categorised as behavioural', by_code['K9']['category'] == 'behavioural',
+          by_code['K9']['category'])
+    check('podium badge categorised as podium', by_code['SF']['category'] == 'podium',
+          by_code['SF']['category'])
+
+    empty = G.badge_catalog([], [])
+    check('empty state still lists the full registry', len(empty) == len(G.BADGES), str(len(empty)))
+    check('nothing is earned in an empty state', not any(b['earned'] for b in empty))
+
+
 def test_timezone_config_is_read_and_validated():
     db = FakeDB()
     G.invalidate_tz_cache()
