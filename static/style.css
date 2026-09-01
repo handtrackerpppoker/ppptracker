@@ -1573,7 +1573,12 @@ button.auth-chip { background: none; }
    regardless of gamification load state. */
 .header-flanked {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  /* Both flanking tracks share the same minmax() floor so they always end up
+     the same width as each other — plain `1fr auto 1fr` lets each track's
+     own min-content size (gam-stats needs ~225px, gam-side needs less)
+     override the equal 1fr split, which pushed the title's center off the
+     true page center by ~40px on desktop. */
+  grid-template-columns: minmax(225px, 1fr) auto minmax(225px, 1fr);
   align-items: center;
   gap: 12px;
   max-width: 1400px;
