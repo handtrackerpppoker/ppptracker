@@ -1687,6 +1687,13 @@ button.auth-chip { background: none; }
   .section-header { padding: 10px 14px; }
   .table-dark tbody td { padding: 8px 6px; }
   .export-grid-btn { min-height: 58px; font-size: .68rem; }
+  /* .import-input + .btn-import sit in a flex-nowrap row (see index.html);
+     width:100% on the button alone fought that nowrap and forced the row
+     wider than the viewport instead of actually filling it, so the button
+     rendered oversized and overflowing the card. Stack the row so each
+     child's 100% width applies to its own line. */
+  .hero-row .import-card .d-flex.flex-nowrap { flex-wrap: wrap; }
+  .import-input { width: 100%; }
   .btn-import { width: 100%; }
 }
 
